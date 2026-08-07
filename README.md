@@ -101,6 +101,27 @@ to a situation it never anticipated and a rule you merely obey does not.
 for it, but it has to say so, and the departure appears on the plan you approve.
 Departing is allowed. Departing silently is not.
 
+## Watching Codex work
+
+Optionally, Duet opens a second terminal window running a live Codex session and
+pushes work into it, so you watch the two agents collaborate instead of staring
+at a spinner.
+
+```bash
+duet config window.visible true
+pip install websockets          # only needed for window injection
+```
+
+This is not a trick. `codex app-server` is documented JSON-RPC, the TUI ships a
+first-party `--remote` flag, and an external client starting a turn on a thread
+it does not own is supported behaviour. It was verified end to end before being
+built: see the `prototype/oq1-codex-remote-attach` branch for the harness.
+
+Opening a terminal has no portable primitive, so Duet uses a ladder: macOS
+`open -a Terminal`, then tmux if you are in a session, then a few Linux
+terminals, and finally it prints the command for you to paste. The last rung is
+not a failure. A tool that says "run this" beats one that silently does nothing.
+
 ## Configuration
 
 ```bash
@@ -108,6 +129,7 @@ duet config agents.max 3            # parallel agents. Default 3, ceiling 10
 duet config budget.warnUsd 5        # warn past this spend
 duet config budget.stopUsd 20       # hard stop, checkpointed and resumable
 duet config permissions.bypass true # fast mode, see below
+duet config window.visible true     # open a live Codex window
 ```
 
 Global by default, with an optional per-project override. Duet writes nothing

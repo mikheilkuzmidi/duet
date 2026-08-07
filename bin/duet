@@ -19,6 +19,7 @@ export DUET_ROOT="$(cd "$HERE/.." && pwd)"
 . "$DUET_ROOT/lib/duet-models.sh"
 . "$DUET_ROOT/lib/duet-run.sh"
 . "$DUET_ROOT/lib/duet-github.sh"
+. "$DUET_ROOT/lib/duet-window.sh"
 
 cmd="${1:-help}"; shift 2>/dev/null || true
 
@@ -32,6 +33,13 @@ case "$cmd" in
     duet_say "  codex : ${m:-<catalog unavailable>} at effort $(duet_codex_effort "$m")"
     duet_step "GitHub"
     duet_say "  $(duet_gh_capabilities 2>/dev/null || echo 'gh not installed')"
+    duet_step "Visible window"
+    if duet_window_enabled; then duet_say "  on  ($DUET_WS_URL)"; else duet_say "  off (duet config window.visible true)"; fi
+    duet_window_precheck
+    python3 -c "import websockets" 2>/dev/null \
+      && duet_ok "websockets present (window injection available)" \
+      || duet_warn "python websockets missing; window injection unavailable, headless still works"
+
     duet_step "Notes"
     duet_say "  Codex CLI is required. The Codex desktop app cannot be driven this way."
     duet_say "  Duet does not require the managed standalone Codex install."
