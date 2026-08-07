@@ -1,0 +1,21 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "duet",
+  "description": "Duet: Claude and Codex working as one build pipeline, so the model that is good at facts establishes them before the model that is good at judgement writes the code.",
+  "owner": {
+    "name": "Mikheil Kuzmidi"
+  },
+  "plugins": [
+    {
+      "name": "duet",
+      "description": "Claude and Codex as one build pipeline. Codex establishes current documentation, real API surfaces, dependency versions, supply-chain safety and tests; Claude owns grilling, spec, architecture, logic and design. Built to stop the failure where an AI confidently writes an API call that was removed two versions ago.",
+      "author": {
+        "name": "Mikheil Kuzmidi"
+      },
+      "category": "development",
+      "source": "./",
+      "homepage": "https://github.com/mikheilkuzmidi/duet",
+      "license": "MIT"
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "name": "duet",
+  "version": "0.1.0",
+  "description": "Claude and Codex as one build pipeline. Codex establishes the facts (current docs, real API surfaces, dependency versions, supply-chain safety, tests); Claude owns judgement (grilling, spec, architecture, logic, design). Stops the failure where an AI confidently writes an API call that was removed two versions ago.",
+  "author": {
+    "name": "Mikheil Kuzmidi"
+  },
+  "homepage": "https://github.com/mikheilkuzmidi/duet",
+  "repository": "https://github.com/mikheilkuzmidi/duet",
+  "license": "MIT",
+  "keywords": [
+    "orchestration",
+    "codex",
+    "multi-agent",
+    "documentation",
+    "grounding"
+  ],
+  "interface": {
+    "displayName": "Duet",
+    "shortDescription": "Codex checks the facts, Claude writes the code",
+    "developerName": "Mikheil Kuzmidi",
+    "category": "Development",
+    "capabilities": [],
+    "defaultPrompt": [
+      "duet: add rate limiting to the API",
+      "duet research: what is the current Stripe SDK surface for subscriptions",
+      "duet debate: review the work on this branch"
+    ]
+  }
+}

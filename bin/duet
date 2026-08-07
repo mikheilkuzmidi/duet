@@ -1,0 +1,104 @@
+#!/usr/bin/env bash
+# duet: small CLI for the parts that are not conversation.
+#
+#   duet doctor              check both CLIs, auth, host, caps
+#   duet config <key> [val]  read or set configuration
+#   duet runs                list runs in this project
+#   duet version             version, and whether this copy is stale
+#
+# The pipeline itself is driven by the skills, not by this script. This exists
+# for the things a shell does better than a prompt.
+
+set -uo pipefail
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+export DUET_ROOT="$(cd "$HERE/.." && pwd)"
+
+. "$DUET_ROOT/lib/duet-common.sh"
+. "$DUET_ROOT/lib/duet-host.sh"
+. "$DUET_ROOT/lib/duet-preflight.sh"
+. "$DUET_ROOT/lib/duet-models.sh"
+. "$DUET_ROOT/lib/duet-run.sh"
+. "$DUET_ROOT/lib/duet-github.sh"
+
+cmd="${1:-help}"; shift 2>/dev/null || true
+
+case "$cmd" in
+
+  doctor)
+    duet_preflight || true
+    duet_step "Models"
+    duet_say "  claude: $(duet_claude_model) at effort $(duet_claude_effort)"
+    m="$(duet_codex_model)"
+    duet_say "  codex : ${m:-<catalog unavailable>} at effort $(duet_codex_effort "$m")"
+    duet_step "GitHub"
+    duet_say "  $(duet_gh_capabilities 2>/dev/null || echo 'gh not installed')"
+    duet_step "Notes"
+    duet_say "  Codex CLI is required. The Codex desktop app cannot be driven this way."
+    duet_say "  Duet does not require the managed standalone Codex install."
+    ;;
+
+  config)
+    key="${1:-}"; val="${2:-}"
+    [ -z "$key" ] && { duet_say "usage: duet config <key> [value]"; exit 1; }
+    if [ -z "$val" ]; then
+      printf '%s\n' "$(duet_cfg "$key" "<unset>")"
+    else
+      duet_cfg_set "$key" "$val" "${3:-global}"
+      duet_ok "$key = $val"
+      [ "$key" = "permissions.bypass" ] && [ "$val" = "true" ] && duet_fastmode_offer
+    fi
+    ;;
+
+  runs)
+    root="$(duet_run_root)"
+    [ -d "$root" ] || { duet_say "no runs yet"; exit 0; }
+    for d in "$root"/*/; do
+      [ -d "$d" ] || continue
+      id="$(basename "$d")"
+      at="$(duet_run_resume_point "${d%/}")"
+      printf '  %s  next phase: %s\n' "$id" "$at"
+    done
+    ;;
+
+  version)
+    printf 'duet %s\n' "$DUET_VERSION"
+    # Non-blocking staleness check, cached, at most once a day. Duet's behaviour
+    # lives in prompts, so a stale copy does not merely lack features: it
+    # contradicts its own documentation.
+    cache="${XDG_CACHE_HOME:-$HOME/.cache}/duet/latest"
+    mkdir -p "$(dirname "$cache")"
+    if [ ! -f "$cache" ] || [ -n "$(find "$cache" -mmin +1440 2>/dev/null)" ]; then
+      (duet_has gh && gh api repos/mikheilkuzmidi/duet/releases/latest --jq .tag_name 2>/dev/null > "$cache") &
+    fi
+    latest="$(cat "$cache" 2>/dev/null | tr -d 'v[:space:]')"
+    if [ -n "$latest" ] && [ "$latest" != "$DUET_VERSION" ]; then
+      duet_warn "a newer Duet is available ($latest). Upgrade:"
+      duet_say  "  codex plugin marketplace upgrade duet"
+      duet_say  "  claude: /plugin marketplace update mikheilkuzmidi/duet"
+    fi
+    ;;
+
+  help|*)
+    cat <<'EOF'
+duet: Claude and Codex as one build pipeline.
+
+  duet doctor              check both CLIs, auth, host detection, models, caps
+  duet config <key> [val]  read or set config (global, or add "local" to scope)
+  duet runs                list runs in this project
+  duet version             version, and whether this copy is stale
+
+The pipeline itself is conversational. In Claude Code use /duet:duet; in Codex
+reach it through /skills. Codex has no custom slash commands, so onboarding is
+unavoidably asymmetric.
+
+Useful keys:
+  agents.max                parallel agents, default 3, ceiling 10
+  permissions.bypass        fast mode, default false. See README before enabling
+  budget.warnUsd            warn past this spend, default 5
+  budget.stopUsd            hard stop, default 0 (off)
+  models.claude.model       default "best" (a tier alias that tracks new models)
+  models.codex.model        default: highest priority in the runtime catalog
+  resume.researchMaxAgeHours  re-run research on resume past this age, default 24
+EOF
+    ;;
+esac

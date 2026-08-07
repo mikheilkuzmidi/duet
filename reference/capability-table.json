@@ -1,0 +1,58 @@
+{
+  "$comment": "Duet's routing opinion, as data so it is inspectable and overridable. A user may override any row in .duet/config.json without editing this file. A phase whose category maps to codex AND needs judgement splits into a codex brief followed by a claude phase. It is never one phase with two owners.",
+  "version": 1,
+  "owners": {
+    "codex": {
+      "why": "Establishes ground truth. Better at reading current documentation, real API surfaces and backend detail; less prone to answering from stale recollection.",
+      "categories": [
+        "documentation-lookup",
+        "api-surface",
+        "dependency-versions",
+        "dependency-compatibility",
+        "supply-chain-safety",
+        "stack-advisory",
+        "test-authoring",
+        "backend-integration",
+        "fact-verification"
+      ]
+    },
+    "claude": {
+      "why": "Owns judgement. Better at human-shaped reasoning, structure, and design; worse at recalling which API version is current, which is exactly what the codex brief supplies.",
+      "categories": [
+        "grilling",
+        "spec",
+        "architecture",
+        "logic",
+        "design",
+        "ux",
+        "naming",
+        "refactor-reasoning",
+        "planning",
+        "tradeoff-analysis"
+      ]
+    }
+  },
+  "mixed_phase_rule": {
+    "action": "split",
+    "into": [
+      {
+        "owner": "codex",
+        "kind": "brief",
+        "produces": "briefing file consumed by the next phase via --append-system-prompt-file"
+      },
+      {
+        "owner": "claude",
+        "kind": "work",
+        "consumes": "the briefing from the preceding codex phase"
+      }
+    ],
+    "skip_brief_when": "The phase needs nothing outside the working directory: pure logic, naming, structural refactors, tradeoff analysis. The router's choice to skip appears on the plan the human approves, so a wrongly skipped brief is visible before anything runs.",
+    "cache": "Briefs are cached within a run. A later phase touching the same dependency reuses the existing briefing rather than re-researching it."
+  },
+  "deadlock_rule": {
+    "$comment": "Applied to arguments rather than tasks. Used only after the batched debate has run its one rebuttal round.",
+    "resolution": "escalate-to-human",
+    "presentation": "Both positions with their reasoning inline, so the human decides with the argument in front of them rather than a bare choice.",
+    "batching": "Deadlocks join the single final question round rather than interrupting the run."
+  }
+}
