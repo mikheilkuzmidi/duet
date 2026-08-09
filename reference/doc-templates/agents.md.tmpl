@@ -1,0 +1,47 @@
+# Working in {{PROJECT_NAME}}
+
+Rules for any agent, human or otherwise. Each says what and why, because a rule
+you understand adapts to a case it never anticipated and a rule you merely obey
+does not.
+
+## Read before writing
+
+`docs/architecture.md` is the shape of this project. `docs/decisions.md` is why
+it is that shape. Reading both takes two minutes and prevents the class of
+change that works, passes review, and quietly contradicts a decision someone
+made deliberately six months ago.
+
+## Prefer the current documentation over your memory
+
+Your training data is older than this project's dependencies. A plausible API
+that no longer exists is the most expensive kind of wrong, because it survives
+review by looking exactly like code that would work.
+
+Check the version in the lockfile. Read the real signature. Cite where you read
+it.
+
+## Stay inside the architecture
+
+If your change fits the architecture, make it. If it does not, the architecture
+changes first, in `docs/decisions.md`, with the reasoning. Code that silently
+departs from the documented shape is how a codebase stops matching its own map.
+
+## Repair the defect, not the feature
+
+Deleting behaviour to clear an error reaches zero errors without fixing
+anything, and it passes every check that only looks for errors. Make the
+smallest change that removes the cause. If a real fix requires removing a
+feature, that is a decision for a person.
+
+## Finish means finished
+
+`docs/done.md` defines it: zero outstanding issues locally, in the tests, and
+deployed. A check you could not run is recorded as outstanding, never skipped
+quietly.
+
+## Say less
+
+Report the finding, not the search for it. No em dashes. No filler adjectives.
+`docs/style.md` has the rest.
+
+{{PROJECT_SPECIFIC_RULES}}

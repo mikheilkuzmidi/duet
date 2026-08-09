@@ -1,0 +1,53 @@
+# Done
+
+Check this before saying finished. Every agent working here shares it, so
+nobody gets to declare victory on their own terms.
+
+**Done means zero outstanding issues in three places.**
+
+## 1. Locally
+
+- [ ] Installs from a clean checkout with the documented command
+- [ ] Builds with no errors and no new warnings
+- [ ] Starts, and the main flow can be completed by hand
+- [ ] No errors in the log or the browser console during that flow
+- [ ] Type check clean, lint clean
+
+## 2. Tested
+
+- [ ] Every test passes, not only the ones that passed before
+- [ ] Coverage at or above {{COVERAGE_MIN}}%
+- [ ] Every critical path in `docs/testing.md` has a test
+- [ ] No test was skipped, weakened or deleted to get here
+
+## 3. Deployed
+
+- [ ] The same three local checks, against {{DEPLOY_TARGET}}
+- [ ] Every environment variable set, and a missing one fails loudly at startup
+- [ ] The main flow completes against the deployed instance
+
+## A check you could not run
+
+Record it as outstanding. Never skip it quietly.
+
+```
+Outstanding
+  deployed check   not run: no deploy target configured yet
+  coverage         71%, floor is {{COVERAGE_MIN}}%. Missing: {{GAPS}}
+```
+
+That block is the honest form of "not done".
+
+## Fixing to zero
+
+The loop is automatic: find, fix, verify, repeat. Two limits on it.
+
+**It may not finish by deletion.** Removing the feature that fails, commenting
+out the assertion, stubbing the endpoint: each reaches zero and none is a fix.
+If a real fix needs a feature removed, that is a question for a person, and the
+loop moves on to the next issue meanwhile.
+
+**Nothing that worked before may work worse.** {{PARITY_BASELINE}}
+
+If three full passes go by without the outstanding count dropping, stop and
+report. A loop that is not converging will not converge.

@@ -1,0 +1,43 @@
+# Testing
+
+## Run it
+
+```bash
+{{TEST_COMMAND}}
+{{COVERAGE_COMMAND}}
+{{E2E_COMMAND}}
+```
+
+## What gets tested
+
+**Every critical path, whatever the coverage number says.** Coverage is a floor,
+not a target, and a high percentage over the wrong lines proves nothing.
+
+The critical paths here:
+
+- {{CRITICAL_PATH}}
+
+## Coverage floor
+
+{{COVERAGE_MIN}}%. Below it is not done.
+
+## Rules
+
+- A test that is skipped is a test that failed. Fix it or delete it and say why.
+- Never weaken a test to reach green. If the test is wrong, fix the test and put
+  one line in the commit saying what it had wrong.
+- A bug fix comes with the test that would have caught it. That is what stops it
+  coming back.
+- Test behaviour, not implementation. A test that breaks on a rename was testing
+  the rename.
+
+## Fixtures and data
+
+{{FIXTURES}}
+
+## What is deliberately not tested
+
+{{NOT_TESTED}}
+
+With the reason. An untested area someone chose is fine. An untested area
+nobody noticed is not.

@@ -1,6 +1,6 @@
 {
-  "$comment": "Duet's routing opinion, as data so it is inspectable and overridable. A user may override any row in .duet/config.json without editing this file. A phase whose category maps to codex AND needs judgement splits into a codex brief followed by a claude phase. It is never one phase with two owners.",
-  "version": 1,
+  "$comment": "Duet's routing opinion, as data so it is inspectable and overridable. A user may override any row in .duet/config.json without editing this file. Claude always orchestrates; this table decides who does the work, not who runs the run. A phase whose category maps to codex AND needs judgement splits into a codex brief followed by a claude phase. It is never one phase with two owners.",
+  "version": 2,
   "owners": {
     "codex": {
       "why": "Establishes ground truth. Better at reading current documentation, real API surfaces and backend detail; less prone to answering from stale recollection.",
@@ -13,24 +13,58 @@
         "stack-advisory",
         "test-authoring",
         "backend-integration",
+        "infrastructure",
+        "data-modelling",
         "fact-verification"
       ]
     },
     "claude": {
       "why": "Owns judgement. Better at human-shaped reasoning, structure, and design; worse at recalling which API version is current, which is exactly what the codex brief supplies.",
       "categories": [
+        "orchestration",
         "grilling",
         "spec",
         "architecture",
         "logic",
         "design",
         "ux",
+        "frontend",
+        "user-facing-copy",
         "naming",
         "refactor-reasoning",
         "planning",
         "tradeoff-analysis"
       ]
     }
+  },
+  "ownership": {
+    "$comment": "The build-time boundary. Routing decides which phase belongs to whom; this decides what each agent may edit once inside one. It exists because a backend model asked to touch the interface tends to write four paragraphs where the button needed two words.",
+    "claude": {
+      "owns": [
+        "everything the user sees or reads",
+        "frontend code, components, layout, styling, motion",
+        "all user-facing text: copy, labels, button text, error messages, empty states, onboarding, marketing",
+        "documentation prose",
+        "naming"
+      ],
+      "note": "Claude decides every wording and interface question, including ones Codex raises. An intentional choice stands (standing rule 5)."
+    },
+    "codex": {
+      "owns": [
+        "backend code, APIs, handlers, jobs",
+        "database schema, migrations, queries",
+        "third-party integrations and their credentials handling",
+        "infrastructure, deploy configuration, environment variables",
+        "tests, at every level"
+      ],
+      "may_not": [
+        "edit user-facing text, even to correct it",
+        "restyle or restructure the interface",
+        "add explanatory copy to a screen because the behaviour seemed unclear"
+      ],
+      "instead": "File the concern in the review list with the exact string and why it is wrong. One line. Claude decides, and the run continues either way."
+    },
+    "disputes": "A boundary disagreement that survives the rebuttal round joins the single final question round with both positions inline. It never blocks the build."
   },
   "mixed_phase_rule": {
     "action": "split",
@@ -46,6 +80,7 @@
         "consumes": "the briefing from the preceding codex phase"
       }
     ],
+    "brief_discipline": "The brief asks open questions and contains no hypothesis to agree with. See reference/briefing-codex.md, standing rule 8.",
     "skip_brief_when": "The phase needs nothing outside the working directory: pure logic, naming, structural refactors, tradeoff analysis. The router's choice to skip appears on the plan the human approves, so a wrongly skipped brief is visible before anything runs.",
     "cache": "Briefs are cached within a run. A later phase touching the same dependency reuses the existing briefing rather than re-researching it."
   },

@@ -82,3 +82,56 @@ PY
 duet_assume () {   # <run-dir> <what> <why>
   printf -- '- **%s**\n  Why: %s\n' "$2" "$3" >> "$1/assumptions.md"
 }
+
+# ---------- the stop-list ---------------------------------------------------
+# Things a diff cannot undo. Everything else an agent does can be read and
+# reverted afterwards, which is why the list is short: a long stop-list gets
+# switched off wholesale, and a short one survives.
+#
+# Two behaviours over one list, chosen at setup:
+#
+#   ask-now         hit one, stop, ask, wait. The safe default.
+#   defer-to-final  never stop. Do NOT perform the action, queue it for the
+#                   final round with the exact command, and carry on with
+#                   everything else.
+#
+# defer-to-final is what max allowance uses. It is not a weaker guard, it is the
+# same guard without the interruption: the action still does not happen until a
+# human says so, but nobody's afternoon is spent watching for a prompt.
+
+duet_safety_listed () {   # <action id> ; 0 if it is on the stop-list
+  local action="$1" list
+  list="$(duet_cfg safety.alwaysAsk "push-to-main,production-data,delete-outside-tree")"
+  case ",$list," in *",$action,"*) return 0 ;; *) return 1 ;; esac
+}
+
+# duet_safety_gate <run-dir> <action id> <the exact command> <why it is wanted>
+#   0  allowed, go ahead
+#   1  must ask now, and the caller stops
+#   2  deferred to the final round, and the caller carries on WITHOUT doing it
+duet_safety_gate () {
+  local dir="$1" action="$2" cmd="$3" why="$4"
+  duet_safety_listed "$action" || return 0
+  if [ "$(duet_cfg safety.mode ask-now)" = "defer-to-final" ]; then
+    duet_defer_add "$dir" "$action" "$cmd" "$why"
+    duet_warn "held for the final round: $action"
+    return 2
+  fi
+  return 1
+}
+
+# A deferred action is a final-round question that happens to carry a command,
+# so it lives in questions.json rather than a second file nobody would read.
+duet_defer_add () {   # <run-dir> <action> <command> <why>
+  python3 - "$1/questions.json" "$2" "$3" "$4" <<'PY'
+import json,sys
+p,action,cmd,why=sys.argv[1:5]
+try: d=json.load(open(p))
+except Exception: d=[]
+q=f"Run this now? ({action})"
+if not any(x.get("q")==q and x.get("cmd")==cmd for x in d):
+    d.append({"q":q,"cmd":cmd,"recommend":"yes, if the work above is right","why":why,
+              "kind":"deferred-action"})
+json.dump(d,open(p,'w'),indent=2); open(p,'a').write("\n")
+PY
+}

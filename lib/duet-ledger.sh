@@ -39,6 +39,12 @@ import json,sys
 led,label,src=sys.argv[1:4]
 try: d=json.load(open(led))
 except Exception: d={"phases":[],"totalUsd":0}
+# Token path, VERIFIED against a live app-server stream:
+#   thread/tokenUsage/updated -> params.tokenUsage.total.totalTokens
+#   thread/goal/updated       -> params.goal.tokensUsed
+# The older guess at params.usage.total_tokens matches neither, so it recorded
+# zero for every Codex phase. Both real paths are read, plus the old guess, so
+# an exec-shaped stream still works.
 tok=0
 try:
     for line in open(src):
@@ -46,7 +52,12 @@ try:
         if not line: continue
         try: m=json.loads(line)
         except Exception: continue
-        u=(m.get("params") or {}).get("usage") or m.get("usage") or {}
+        p=(m.get("params") or {}) if isinstance(m.get("params"),dict) else {}
+        tu=(p.get("tokenUsage") or {}).get("total") or {}
+        if isinstance(tu.get("totalTokens"),int): tok=max(tok,tu["totalTokens"])
+        g=p.get("goal") or {}
+        if isinstance(g.get("tokensUsed"),int): tok=max(tok,g["tokensUsed"])
+        u=p.get("usage") or m.get("usage") or {}
         for k in ("total_tokens","totalTokens","total"):
             if isinstance(u.get(k),int): tok=max(tok,u[k])
 except Exception: pass

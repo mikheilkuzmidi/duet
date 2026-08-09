@@ -1,6 +1,6 @@
 ---
 name: duet-resume
-description: Continue a Duet run that stopped, died, or hit its budget, re-running only the phase that failed rather than the whole run. Use when the user says "duet resume", or when a previous run was interrupted.
+description: Continue a run that stopped, re-running only the phase that failed. Use when the user says "duet resume", or when a previous run died, was interrupted, or hit its budget.
 ---
 
 # duet resume
@@ -16,6 +16,10 @@ rather than a recovery subsystem.
 
 `duet_run_resume_point` returns the first phase without a completed output.
 Everything before it stands.
+
+On a preset run, that index is the stage number. Print
+`duet_preset_banner <preset> <n>` and carry on from there. The stages are fixed,
+so there is nothing to work out.
 
 ## What does not get regenerated
 

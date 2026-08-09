@@ -1,0 +1,195 @@
+{
+  "preset": "app",
+  "plain": "Build a new app from an idea.",
+  "$comment": "Hardcoded on purpose. The shape of building an app is known in advance, so inventing it fresh every run only means the agents cannot say where they are. What happens inside a stage is not hardcoded. Owners: 'split' means the stage fans out into two single-owner calls that run at the same time, which keeps standing rule 4 true at the level that matters, the call.",
+  "last_intent_gate": 6,
+  "after_last_gate": "No more questions about intent. Everything accumulates into the single final round, each item carrying a recommended answer, so the project finishes whether the human answers all of them, some, or none.",
+  "stages": [
+    {
+      "id": "idea",
+      "title": "Idea",
+      "plain": "What you are making, in your words.",
+      "owner": "claude",
+      "gate": "user",
+      "ask": "What are you making? Say it however you would say it to a friend. No technical words needed.",
+      "done": "spec.md holds one paragraph the human confirmed is right."
+    },
+    {
+      "id": "users",
+      "title": "Users",
+      "plain": "Who uses it, and what they do first.",
+      "owner": "claude",
+      "gate": "user",
+      "ask": "Who is this for, and what is the first thing they do when they open it?",
+      "done": "spec.md names the user types and the first action for each."
+    },
+    {
+      "id": "budget",
+      "title": "Budget and scale",
+      "plain": "Money per month, how many people, by when.",
+      "owner": "claude",
+      "gate": "user",
+      "ask": "Roughly how much can this cost to run per month, how many people will use it, and is there a deadline?",
+      "done": "spec.md holds a monthly ceiling, a user count, a date or 'none', the existing accounts to reuse, and whether personal data is involved.",
+      "also_ask": [
+        {
+          "q": "Anything you already pay for that I should use? A hosting account, a database, a domain.",
+          "why": "Changes which architectures are worth presenting at all. Free tiers you already sit on beat marginally better ones you would have to sign up for."
+        },
+        {
+          "q": "Will this hold anything about real people? Names, emails, messages, payments, health, location.",
+          "why": "Moves auth, hosting region, logging and backups. Asked now because retrofitting it after the architecture is chosen is the expensive way to learn it."
+        }
+      ]
+    },
+    {
+      "id": "grill",
+      "title": "Grill",
+      "plain": "Questions until the spec has no holes. One at a time.",
+      "owner": "claude",
+      "gate": "user",
+      "skip_when": "grill.depth is off",
+      "ask": "One question at a time, in plain language, each one earning its place. Stop when the next question would not change what gets built.",
+      "done": "spec.md answers every question a builder would otherwise have to guess."
+    },
+    {
+      "id": "research",
+      "title": "Research",
+      "plain": "Codex finds what is actually current: versions, templates, hosting, prices.",
+      "owner": "codex",
+      "gate": "none",
+      "starts_at_stage": 4,
+      "brief_must_ask": [
+        "What are the current stable versions of the candidate frameworks, and where did you read each one?",
+        "What is the exact command that creates a new project with each, today?",
+        "What are the hosting options at this scale, and what does each cost per month?",
+        "Which of the candidate dependencies have supply-chain problems: unmaintained, recently transferred, known advisories?",
+        "What changed in the last year that a model trained earlier would get wrong?"
+      ],
+      "done": "A briefing file where every claim carries VERIFIED, CONTRADICTED or UNVERIFIABLE, and a source.",
+      "gate_cmd": "test -s {{out}} && grep -qE 'VERIFIED|CONTRADICTED|UNVERIFIABLE' {{out}}"
+    },
+    {
+      "id": "architecture",
+      "title": "Architecture choice",
+      "plain": "One to three real options, explained in plain English, with monthly cost. You pick.",
+      "owner": "claude",
+      "gate": "user",
+      "ask": "Present each option as: what it is in one sentence, what it costs per month, what it is good at, what it is bad at, and what it would stop you doing later. Recommend one and say why. Offer one option only when there is genuinely one good answer, and say that is why.",
+      "rules": [
+        "Grounded on the research briefing, never on recollection.",
+        "No framework names in the explanation without a plain-English gloss.",
+        "Never present an option nobody should pick, to make another look good."
+      ],
+      "done": "The human chose, and the choice plus the reasoning is in decisions.md.",
+      "last_intent_gate": true,
+      "also_ask": [
+        {
+          "q": "I have everything I need. Should I run to the end and bring you the questions at the finish, or stop at each decision?",
+          "prefilled_from": "autonomy",
+          "options": {
+            "full": "Run to the end. Every question waits for the finish.",
+            "product": "Decide the technical things alone. Stop when it changes what someone sees or reads.",
+            "off": "Stop at every decision."
+          },
+          "why": "Asked here rather than at setup because this is the moment the person actually knows how much they trust the plan. The setup answer is the default, not the verdict."
+        }
+      ]
+    },
+    {
+      "id": "documents",
+      "title": "Documents",
+      "plain": "The files that stop every future agent drifting. These get committed.",
+      "owner": "claude",
+      "gate": "none",
+      "writes": [
+        "CLAUDE.md",
+        "AGENTS.md",
+        "docs/architecture.md",
+        "docs/product.md",
+        "docs/decisions.md",
+        "docs/style.md",
+        "docs/testing.md",
+        "docs/done.md"
+      ],
+      "from": "reference/doc-templates/",
+      "done": "All eight files exist, filled in, no placeholder left, and committed.",
+      "gate_cmd": "test -f CLAUDE.md && test -f AGENTS.md && test -d docs && ! grep -rqF '{{' CLAUDE.md AGENTS.md docs/"
+    },
+    {
+      "id": "scaffold",
+      "title": "Scaffold",
+      "plain": "Start from the current official template, then strip what is not needed.",
+      "owner": "codex",
+      "gate": "none",
+      "rules": [
+        "Use the template command the research pass verified, not one from memory.",
+        "Delete the template's demo content, sample pages and unused dependencies in the same commit, so the first commit is the project rather than the template."
+      ],
+      "done": "It installs, builds and starts from a clean checkout, and the commit message names the template version.",
+      "gate_cmd": "{{cmd.install}} && {{cmd.typecheck}}"
+    },
+    {
+      "id": "build",
+      "title": "Build",
+      "plain": "Claude builds what people see. Codex builds what runs underneath.",
+      "owner": "split",
+      "owners": {
+        "claude": "frontend, components, layout, and every word the user reads",
+        "codex": "backend, database, integrations, environment, deployment"
+      },
+      "gate": "none",
+      "rules": [
+        "Codex does not edit user-facing text, even to correct it. It files the concern with the exact string and why. Claude decides.",
+        "Claude does not rewrite backend logic. Same protocol in reverse.",
+        "Both work against docs/architecture.md. A change to the architecture is a decision, and decisions go in docs/decisions.md."
+      ],
+      "done": "Every acceptance criterion in spec.md has code behind it.",
+      "gate_cmd": "{{cmd.typecheck}} && {{cmd.lint}}"
+    },
+    {
+      "id": "tests",
+      "title": "Tests",
+      "plain": "Codex writes the tests, to the coverage floor and over every critical path.",
+      "owner": "codex",
+      "gate": "none",
+      "done": "Suite green, coverage at or above done.coverageMin, and every critical path covered whatever the percentage says.",
+      "gate_cmd": "{{cmd.test}}"
+    },
+    {
+      "id": "debate",
+      "title": "Debate",
+      "plain": "Both agents review the work and argue about it once.",
+      "owner": "both",
+      "gate": "none",
+      "done": "Every concern is fixed, defended with a reason, or in the final question round.",
+      "gate_cmd": "test -s {{out}}"
+    },
+    {
+      "id": "polish",
+      "title": "Polish",
+      "plain": "Read it as a person. No em dashes, no AI-looking design, no filler words.",
+      "owner": "claude",
+      "gate": "none",
+      "checks": [
+        "No em dashes anywhere in the product or its docs.",
+        "No AI-slop design: purple-to-blue gradients on everything, three identical feature cards, an emoji per heading, a hero that says nothing.",
+        "Every button, label and error message says what happens next.",
+        "Empty states and error states exist and are written, not defaulted."
+      ],
+      "done": "docs/style.md holds the rules, and the product obeys them.",
+      "gate_cmd": "duet_no_emdash . && {{cmd.lint}}"
+    },
+    {
+      "id": "done",
+      "title": "Done",
+      "plain": "Zero outstanding issues: locally, in tests, and deployed.",
+      "owner": "both",
+      "gate": "none",
+      "spec": "reference/definition-of-done.md",
+      "done": "Zero outstanding in all three places, or a written list of what is still open and why.",
+      "gate_cmd": "{{cmd.install}} && {{cmd.typecheck}} && {{cmd.lint}} && {{cmd.test}}"
+    }
+  ],
+  "gate_cmd_note": "A stage is done when its gate_cmd exits zero, not when an agent says so. {{cmd.X}} resolves from commands.* in .duet/config.json, detected once by lib/duet-detect.sh. {{out}} is the phase output path. Human gates carry no command, because 'the human confirmed' is not a command."
+}

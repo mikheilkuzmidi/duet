@@ -1,6 +1,6 @@
 ---
 name: duet-plan
-description: Generate a Duet phase plan and show it for approval without executing anything. Use when the user says "duet plan", or wants to see how work would be split between Claude and Codex before committing to a run.
+description: Show the plan and run nothing. Use when the user says "duet plan", or wants to see how work would split between Claude and Codex before committing to it.
 ---
 
 # duet plan
@@ -9,6 +9,11 @@ Produce the plan and stop. Nothing executes.
 
 Useful when you want to see the routing before spending anything, or when you
 want to hand the plan to someone else.
+
+If the task matches a preset (`duet-app`, `duet-rescue`, `duet-feature`,
+`duet-skill`), show that preset's fixed stages with
+`duet_preset_show <preset>` instead of generating phases. The stages are already
+decided; pretending to derive them would be theatre.
 
 ## Generate
 
@@ -42,7 +47,7 @@ Plan for: <task>
     honoured: 1,2,3,4,5,6,7
     skipped : none
 
-  Parallel cap: 3 (ceiling 10)
+  Agent caps: claude 2, codex 2, ceiling 10
   Estimated agents: 4
 ```
 

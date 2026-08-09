@@ -1,0 +1,57 @@
+# Architecture
+
+The shape of {{PROJECT_NAME}}, and why it is this shape. Change the document
+before you change the code.
+
+## In one paragraph
+
+{{PLAIN_ENGLISH_SUMMARY}}
+
+## The pieces
+
+| Piece | What it does | Where it lives |
+|---|---|---|
+| {{PIECE}} | {{ROLE}} | {{PATH}} |
+
+## How a request travels
+
+{{REQUEST_PATH}}
+
+Trace one real request end to end, naming the files it passes through. This is
+the section people actually read.
+
+## The stack, with versions and dates
+
+| Thing | Version | Why this one | Verified |
+|---|---|---|---|
+| {{DEPENDENCY}} | {{VERSION}} | {{REASON}} | {{DATE_AND_SOURCE}} |
+
+Versions carry a date and a source because a version without one is a claim
+about the past that reads like a claim about the present.
+
+## Data
+
+{{DATA_MODEL}}
+
+Where state lives, what owns it, and what happens to it on failure.
+
+## Environment
+
+| Variable | What it is for | Required |
+|---|---|---|
+| {{VAR}} | {{PURPOSE}} | {{YES_OR_NO}} |
+
+A missing required variable must fail loudly at startup, not silently at 3am.
+
+## Boundaries
+
+What this project deliberately does not do, and what it hands to something else.
+
+{{BOUNDARIES}}
+
+## Known weak points
+
+{{WEAK_POINTS}}
+
+Honest list. The load-bearing hack that everyone knows about is safer written
+down than discovered.

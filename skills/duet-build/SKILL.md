@@ -1,6 +1,6 @@
 ---
 name: duet-build
-description: Execute an approved Duet plan, running each phase with its assigned owner and grounding every Claude phase on the preceding Codex brief. Use when the user says "duet build", or wants to run a plan that duet plan already produced.
+description: Run a plan that was already approved. Use when the user says "duet build", or wants to execute what duet plan produced.
 ---
 
 # duet build
@@ -32,12 +32,21 @@ into the run directory and polled with `duet_poll`, not awaited.
 
 ## Parallelism
 
-Never exceed `duet_max_agents`, ceiling 10, default 3, one shared pool across
-both CLIs. Every spawn goes through the single gate; a phase may not quietly
-raise its own budget.
+Two pools, one ceiling: `duet_max_agents_for claude` and
+`duet_max_agents_for codex`, never more than 10 in total. The pools are separate
+because the accounts and their rate limits are separate, so a single shared
+number could only ever be wrong for one of them. Every spawn goes through the
+gate; a phase may not quietly raise its own budget.
 
 **On a 429 or a session limit, stop spawning. Do not retry.** Retrying into a
 rate limit turns a pause into a ban risk.
+
+## Ownership inside a phase
+
+Claude owns everything the user sees and every word they read. Codex owns
+everything underneath. Codex files wording and interface concerns with the exact
+string and the reason; it does not edit them. Claude decides.
+`reference/capability-table.json` holds the full boundary.
 
 ## Questions
 

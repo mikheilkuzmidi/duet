@@ -1,6 +1,6 @@
 ---
 name: duet-research
-description: Run a Codex research pass alone, without the rest of the Duet pipeline, to establish current facts about a dependency, API, or version before writing any code. Use when the user says "duet research", or when you need current documentation rather than recalled documentation.
+description: Have Codex check what is currently true about a dependency, API or version. No code written. Use when the user says "duet research", or when recalled documentation is not good enough.
 ---
 
 # duet research
@@ -20,6 +20,22 @@ The briefing goes in as a **file**, never as an argument. Codex rejects prompts
 over 1,048,576 characters, and the npm shim dies near 1 MB with a Node
 `RangeError` that names the wrong cause entirely.
 
+## Write the brief so it cannot be agreed with
+
+`reference/briefing-codex.md`, in full, before writing a word of it.
+
+**Ask the question, withhold the answer.** "Confirm the weight defaults to 2"
+gets you a yes. "List every documented request weight and cite where you read
+each one" gets you the table, and the table is where the wrong number shows up.
+
+Ask for the table, never the yes or no. Never put your hypothesis in the brief.
+If a specific claim must be tested, label it a claim of unknown origin, say
+explicitly not to evaluate whether it is plausible, and require an independent
+lookup path. Plausibility is exactly the check that lets a wrong number through.
+
+`duet_brief_check` runs automatically and warns on leading phrasings. It blocks
+nothing. Rewrite what it flags anyway.
+
 ## What a research pass must produce
 
 Not prose about the topic. A **briefing another agent can be grounded on**:
@@ -31,8 +47,16 @@ Not prose about the topic. A **briefing another agent can be grounded on**:
 - Anything that contradicts what a reasonable person would assume.
 - Compatibility between the pieces, not just each piece alone.
 
-Every claim names its source (standing rule 3). A claim nobody can check is a
-guess wearing a finding's clothes.
+Every claim comes back with exactly one verdict and a source (standing rule 3):
+
+- **VERIFIED** plus the URL, file path or command whose output it rests on.
+- **CONTRADICTED** plus the correct value plus the source. This is the highest
+  value output a research pass produces. Never soften it into a hedge.
+- **UNVERIFIABLE** plus what was tried and what blocked it.
+
+UNVERIFIABLE is a respectable answer. It must never be promoted to VERIFIED
+because the claim sounded reasonable, and whoever consumes the briefing treats
+it as an open question rather than a soft yes.
 
 ## Stack advisory
 

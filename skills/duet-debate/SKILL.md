@@ -1,6 +1,6 @@
 ---
 name: duet-debate
-description: Run the batched Codex and Claude review exchange over existing work, where Codex sends a list of concerns, Claude answers the whole list, Codex pushes back once, and only genuine defects get changed. Use when the user says "duet debate", or wants two AIs to argue over a branch before it ships.
+description: Have both AIs review existing work and argue about it once. Use when the user says "duet debate", or wants a branch challenged before it ships, including work they wrote themselves.
 ---
 
 # duet debate

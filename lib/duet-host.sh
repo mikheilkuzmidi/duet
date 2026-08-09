@@ -6,6 +6,13 @@
 # environment variables. So the handshake comes first and sniffing is only a
 # fallback.
 #
+# As of 0.2.0 the answer to "who orchestrates" is no longer detected, it is
+# fixed: CLAUDE ORCHESTRATES. Codex is the fact-finder, the backend and the
+# tests. That deleted a whole class of bugs. It also deleted a real constraint:
+# Codex-orchestrates required danger-full-access, because Codex's sandbox kills
+# DNS to api.anthropic.com, so the direction we kept is the one that works with
+# nobody's sandbox weakened.
+#
 # THE STANDING RULE: host identity may select a default. It may never gate
 # whether the work is correct. Anything that would produce a wrong answer under
 # `unknown` is a bug in the caller, not a missing detection case.
@@ -34,25 +41,18 @@ duet_host () {
   printf 'unknown'
 }
 
-# The counterpart we would delegate to. On `unknown` we assume claude is the
-# orchestrator, because that is the direction that works without weakening
-# anyone's sandbox (issue #2: codex -> claude needs danger-full-access, since
-# Codex's sandbox kills DNS to api.anthropic.com).
-duet_counterpart () {
-  case "$(duet_host)" in
-    claude) printf 'codex' ;;
-    codex)  printf 'claude' ;;
-    *)      printf 'codex' ;;
-  esac
+# Duet drives from Claude Code. Started from Codex, it says so in one line and
+# stops, rather than half working in a direction that has been removed.
+#
+# `unknown` proceeds. Detection failing is not a reason to refuse, and the
+# orchestrator being Claude is now an assumption Duet is entitled to make.
+duet_require_claude_host () {
+  if [ "$(duet_host)" = "codex" ]; then
+    duet_err "Duet runs from Claude Code. Start it there."
+    duet_say "  Codex is Duet's fact-finder, backend and test author. It does not drive."
+    return 1
+  fi
+  return 0
 }
 
-# Announce an assumption rather than making it silently, so a wrong guess is
-# visible and cheap instead of confusing.
-duet_host_report () {
-  local h; h="$(duet_host)"
-  if [ "$h" = "unknown" ]; then
-    duet_warn "could not identify the host CLI; assuming Claude orchestrates."
-    duet_warn "set DUET_HOST=claude|codex to be explicit."
-  fi
-  printf '%s' "$h"
-}
+duet_host_report () { printf '%s' "$(duet_host)"; }

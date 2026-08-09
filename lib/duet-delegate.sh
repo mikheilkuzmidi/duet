@@ -2,13 +2,59 @@
 # Spawning the other agent. This is where most of the research findings live,
 # because almost every flag here exists to avoid a specific silent failure.
 # (issues #15, #2, #6)
+#
+# Direction is fixed as of 0.2.0: Claude orchestrates, Codex is delegated to.
+# duet_delegate_claude remains, because the orchestrator still farms parallel
+# Claude work out to sub-sessions, but nothing here drives Duet from Codex.
 
 # shellcheck source=duet-common.sh
 . "$(dirname "${BASH_SOURCE[0]}")/duet-common.sh"
 . "$(dirname "${BASH_SOURCE[0]}")/duet-models.sh"
 . "$(dirname "${BASH_SOURCE[0]}")/duet-host.sh"
+. "$(dirname "${BASH_SOURCE[0]}")/duet-progress.sh"
+. "$(dirname "${BASH_SOURCE[0]}")/duet-goal.sh"
+. "$(dirname "${BASH_SOURCE[0]}")/duet-preflight.sh"   # duet_fastmode
 
 DUET_BASH_CEILING=600   # Claude Code's own Bash tool timeout, in seconds
+
+# ---------- the brief check -------------------------------------------------
+# Standing rule 8. A brief containing its own conclusion gets that conclusion
+# back, and the agreement then looks like verification.
+#
+# This runs automatically on every Codex brief. It WARNS and does not block:
+# there are real briefs that legitimately contain the word "confirm", and a gate
+# people learn to route around protects nothing. A warning at the moment of
+# sending is enough, because the fix takes ten seconds.
+
+duet_brief_check () {   # <brief file> ; returns 1 if anything was flagged
+  local f="$1" hits
+  [ -f "$f" ] || return 0
+  hits="$(grep -nEio \
+    'confirm (that|the|it|this)|just confirm|verify that [a-z_]+ (is|are|still)|as we discussed|as expected|as you know|should (be|still be)|i (believe|think)|presumably|obviously|make sure (it|this) is still' \
+    "$f" 2>/dev/null | head -5)"
+  [ -z "$hits" ] && return 0
+  duet_warn "this brief may be leading (standing rule 8):"
+  printf '%s\n' "$hits" | sed 's/^/      /' >&2
+  duet_say  "      ask for the table, not the yes or no. reference/briefing-codex.md"
+  return 1
+}
+
+# ---------- the injected reference set --------------------------------------
+# Rules, output discipline and the shared definition of done, in front of every
+# delegated call. Re-injected at every phase boundary because prompt text does
+# not survive context compaction and a system-prompt file does.
+
+duet_compose_context () {   # <dest> [extra files...]
+  local dest="$1"; shift
+  : > "$dest"
+  local f
+  while IFS= read -r f; do
+    [ -f "$f" ] && { cat "$f" >> "$dest"; printf '\n\n' >> "$dest"; }
+  done < <(duet_ref_set)
+  for f in "$@"; do
+    [ -f "$f" ] && { cat "$f" >> "$dest"; printf '\n\n' >> "$dest"; }
+  done
+}
 
 # ---------- Codex -----------------------------------------------------------
 # duet_delegate_codex <briefing-file> <cwd> <out.jsonl>
@@ -26,11 +72,20 @@ DUET_BASH_CEILING=600   # Claude Code's own Bash tool timeout, in seconds
 #                           rollout, and we need it to verify no downgrade
 #   prompt via stdin/file   codex rejects >1,048,576 chars and the npm shim dies
 #                           near 1MB with a misleading Node RangeError, exit 7
+#
+# Codex exec has no system-prompt flag, so the reference set is PREPENDED to the
+# prompt file. Same effect, one file, and it stays inside the size limit that
+# the brief was already sized against.
 
 duet_delegate_codex () {
   local brief="$1" cwd="${2:-$PWD}" out="${3:-/dev/stdout}"
-  local sandbox model effort
+  local sandbox model effort prompt watcher pid rc
   [ -f "$brief" ] || duet_die "briefing file not found: $brief"
+
+  duet_brief_check "$brief" || true
+
+  prompt="$(mktemp)"
+  duet_compose_context "$prompt" "$(duet_ref briefing-codex.md)" "$brief"
 
   if duet_fastmode 2>/dev/null; then sandbox="danger-full-access"; else sandbox="workspace-write"; fi
   model="$(duet_codex_model)"
@@ -40,11 +95,18 @@ duet_delegate_codex () {
   [ -n "$model" ]  && args+=(-m "$model")
   [ -n "$effort" ] && args+=(-c "model_reasoning_effort=\"$effort\"")
 
-  duet_say "  codex: model=${model:-default} effort=${effort:-default} sandbox=$sandbox"
+  duet_say "  codex · ${model:-default} · effort ${effort:-default} · $sandbox"
 
   # NEVER pipe codex --json into head: a broken pipe panics it with exit 101.
-  DUET_HOST=codex codex "${args[@]}" < "$brief" > "$out" 2>>"${out}.err"
-  local rc=$?
+  # Backgrounded so the heartbeat can prove it is alive; a phase that runs for
+  # four silent minutes gets killed by a reasonable human.
+  DUET_HOST=codex codex "${args[@]}" < "$prompt" > "$out" 2>>"${out}.err" &
+  pid=$!
+  watcher="$(duet_progress_watch "$out" "codex" "$pid")"
+  wait "$pid"; rc=$?
+  duet_progress_stop "$watcher"
+  rm -f "$prompt"
+
   [ $rc -ne 0 ] && duet_err "codex exited $rc (see ${out}.err)"
   return $rc
 }
@@ -52,7 +114,7 @@ duet_delegate_codex () {
 # ---------- Claude ----------------------------------------------------------
 # duet_delegate_claude <briefing-file> <task-file> <cwd> <out.json>
 #
-#   --append-system-prompt-file  carries the briefing AND the standing rules.
+#   --append-system-prompt-file  carries the briefing AND the reference set.
 #                                Hidden from --help but real. Far better than
 #                                stuffing them into a user turn, and it is the
 #                                injection point that survives compaction.
@@ -62,12 +124,11 @@ duet_delegate_codex () {
 
 duet_delegate_claude () {
   local brief="$1" task="$2" cwd="${3:-$PWD}" out="${4:-/dev/stdout}"
-  local sid rules sysprompt mode
+  local sid sysprompt mode rc
   sid="$(duet_uuid)"
-  rules="$DUET_ROOT/reference/standing-rules.md"
 
   sysprompt="$(mktemp)"
-  { [ -f "$rules" ] && cat "$rules"; echo; [ -f "$brief" ] && cat "$brief"; } > "$sysprompt"
+  duet_compose_context "$sysprompt" "$brief"
 
   if duet_fastmode 2>/dev/null; then
     mode="bypassPermissions"
@@ -75,7 +136,7 @@ duet_delegate_claude () {
     mode="acceptEdits"
   fi
 
-  duet_say "  claude: model=$(duet_claude_model) effort=$(duet_claude_effort) mode=$mode"
+  duet_say "  claude · $(duet_claude_model) · effort $(duet_claude_effort) · $mode"
 
   ( cd "$cwd" && DUET_HOST=claude claude -p \
       --model "$(duet_claude_model)" \
@@ -84,7 +145,7 @@ duet_delegate_claude () {
       --session-id "$sid" \
       --append-system-prompt-file "$sysprompt" \
       < "$task" > "$out" 2>>"${out}.err" )
-  local rc=$?
+  rc=$?
   rm -f "$sysprompt"
 
   # The auto-mode classifier blocks launching agent runners when approvals are
@@ -102,6 +163,93 @@ duet_delegate_claude () {
   return $rc
 }
 
+# ---------- goals: work that must come back finished ------------------------
+#
+# WHICH MECHANISM FOR WHICH PHASE, and the reason:
+#
+#   brief and research  ->  duet_delegate_codex, one shot.
+#       One deliverable, no continuation to manage. Quality is already governed
+#       by duet_brief_check and the verdict vocabulary.
+#
+#   anything that writes code  ->  duet_work_codex / duet_work_claude, as goals.
+#       These are the phases that come back at eighty percent, because a prompt
+#       ends when the model stops talking. A goal ends when a command exits zero.
+
+# The gate. A phase is done when a command says so, not when an agent says so.
+duet_gate_check () {   # <gate command> <cwd>
+  local cmd="$1" cwd="${2:-$PWD}"
+  [ -z "$cmd" ] && return 0            # no gate declared, nothing to check
+  ( cd "$cwd" && eval "$cmd" ) >/dev/null 2>&1
+}
+
+# duet_work_codex <objective-file> <cwd> <out.jsonl>
+# The reference set rides in as developerInstructions on the thread rather than
+# being prepended to the prompt, which keeps the objective a clean single block.
+duet_work_codex () {
+  local obj="$1" cwd="${2:-$PWD}" out="${3:-/dev/stdout}" dev rc
+  dev="$(mktemp)"
+  duet_compose_context "$dev" "$(duet_ref goal-format.md)"
+  duet_fastmode 2>/dev/null && export DUET_FASTMODE_APPROVE=1
+  duet_goal_run "$obj" "$cwd" "$out" "$dev"
+  rc=$?
+  rm -f "$dev"
+  [ $rc -ne 0 ] && duet_err "codex goal $(duet_goal_explain $rc)"
+  return $rc
+}
+
+# duet_work_claude <objective-file> <cwd> <out.json> <gate command>
+#
+# Claude has no goal API. `/goal` is not a file under ~/.claude, and built-in
+# commands never are, so its existence could not be established either way.
+# Rather than bet a delegation path on an unverified command, this builds the
+# same property out of parts that are verified: run, check the gate, resume the
+# same session if it has not passed. A loop that ends on a command exiting zero
+# is what a goal is; the API is a convenience, not the mechanism.
+duet_work_claude () {
+  local obj="$1" cwd="${2:-$PWD}" out="${3:-/dev/stdout}" gate="${4:-}"
+  local sid sysprompt mode turns max rc
+  sid="$(duet_uuid)"
+  max="$(duet_cfg goal.maxTurns 40)"
+  turns=0
+
+  sysprompt="$(mktemp)"
+  duet_compose_context "$sysprompt" "$(duet_ref goal-format.md)"
+
+  if duet_fastmode 2>/dev/null; then mode="bypassPermissions"; else mode="acceptEdits"; fi
+  duet_say "  claude goal · $(duet_claude_model) · $mode · gate: ${gate:-none}"
+
+  while [ "$turns" -lt "$max" ]; do
+    turns=$((turns + 1))
+    if [ "$turns" -eq 1 ]; then
+      ( cd "$cwd" && DUET_HOST=claude claude -p \
+          --model "$(duet_claude_model)" --permission-mode "$mode" \
+          --output-format json --session-id "$sid" \
+          --append-system-prompt-file "$sysprompt" \
+          < "$obj" > "$out" 2>>"${out}.err" )
+    else
+      printf 'Continue toward the objective. Do not summarise progress and do not ask questions. Keep working until this passes: %s\n' "$gate" \
+        | ( cd "$cwd" && DUET_HOST=claude claude -p \
+              --model "$(duet_claude_model)" --permission-mode "$mode" \
+              --output-format json --resume "$sid" \
+              --append-system-prompt-file "$sysprompt" \
+              > "$out" 2>>"${out}.err" )
+    fi
+    rc=$?
+    [ $rc -ne 0 ] && { duet_err "claude exited $rc (see ${out}.err)"; break; }
+
+    if duet_gate_check "$gate" "$cwd"; then
+      duet_say "  claude goal · gate passed on turn $turns"
+      rm -f "$sysprompt"; return 0
+    fi
+    [ -z "$gate" ] && { rm -f "$sysprompt"; return 0; }   # nothing to loop on
+    duet_say "  claude goal · gate not passed, continuing (turn $turns)"
+  done
+
+  rm -f "$sysprompt"
+  duet_err "claude goal did not pass its gate in $max turns"
+  return 78
+}
+
 # ---------- long phases -----------------------------------------------------
 # Neither CLI has a timeout flag, and Claude Code's Bash tool caps at 600s. So
 # anything that might run long is detached with output redirected to the run
@@ -116,7 +264,7 @@ duet_poll () {   # <pid> <label> [interval]
   local pid="$1" label="$2" iv="${3:-10}" waited=0
   while kill -0 "$pid" 2>/dev/null; do
     sleep "$iv"; waited=$((waited+iv))
-    [ $((waited % 60)) -eq 0 ] && duet_say "  ${label}: still running (${waited}s)"
+    [ $((waited % 60)) -eq 0 ] && duet_say "  ${label} · $(duet_progress_fmt $waited) · still running"
   done
   wait "$pid"; return $?
 }

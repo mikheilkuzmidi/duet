@@ -8,6 +8,7 @@
 
 # shellcheck source=duet-common.sh
 . "$(dirname "${BASH_SOURCE[0]}")/duet-common.sh"
+. "$(dirname "${BASH_SOURCE[0]}")/duet-setup.sh"
 
 # ---------- detection -------------------------------------------------------
 # Returns: ok | missing | logged-out
@@ -87,9 +88,17 @@ duet_preflight () {
     return 1
   fi
 
-  duet_ok "host: $(duet_host_report)"
-  duet_ok "parallel agent cap: $(duet_max_agents) (ceiling ${DUET_MAX_AGENTS_CEILING})"
+  duet_require_claude_host || return 1
+
+  duet_ok "agents: claude $(duet_max_agents_for claude), codex $(duet_max_agents_for codex), ceiling ${DUET_MAX_AGENTS_CEILING}"
   duet_fastmode_report
+
+  # Setup is not a gate, it is a missing answer. Say so once, in one line, and
+  # let the caller decide whether to run it before continuing.
+  if ! duet_setup_done; then
+    duet_warn "this repo is not set up yet. Run /duet:duet-setup, or duet setup."
+    return 2
+  fi
   return 0
 }
 

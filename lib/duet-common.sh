@@ -5,10 +5,11 @@
 # CLIs. A tool that lints other people's dependency hygiene should not arrive
 # with a pile of its own.
 
-DUET_VERSION="0.1.0"
+DUET_VERSION="0.3.0"
 DUET_ROOT="${DUET_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
-DUET_MAX_AGENTS_CEILING=10          # never raisable, see issue #21
-DUET_MAX_AGENTS_DEFAULT=3
+DUET_MAX_AGENTS_CEILING=10          # total across both sides, never raisable
+DUET_MAX_AGENTS_DEFAULT=3           # legacy total, used when no side cap is set
+DUET_SIDE_DEFAULT=2                 # per-side default, chosen at setup
 
 # ---------- output ----------------------------------------------------------
 # Everything Duet says goes through here so a caller can silence or capture it.
@@ -85,12 +86,65 @@ duet_write_atomic () {
 
 duet_has () { command -v "$1" >/dev/null 2>&1; }
 
-# Concurrency ceiling. A user may lower it; nothing may raise it past the
-# ceiling, because the point is protecting their rate limits, not ours.
+# Em dashes, as a gate rather than a hope. A preset's polish stage calls this,
+# so "no em dashes" is checked by a command exiting zero rather than by an agent
+# believing it complied. Written as a function because escaping a UTF-8 literal
+# through JSON into eval is exactly the kind of thing that silently stops
+# matching and reports success forever.
+duet_no_emdash () {   # <dir> [extra find args...]
+  local dir="${1:-.}"
+  local hits
+  hits="$(grep -rlF "$(printf '\xe2\x80\x94')" \
+            --include='*.ts' --include='*.tsx' --include='*.js' --include='*.jsx' \
+            --include='*.md' --include='*.html' --include='*.css' --include='*.py' \
+            --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=.duet \
+            "$dir" 2>/dev/null)"
+  [ -z "$hits" ] && return 0
+  duet_err "em dashes found in:"; printf '%s\n' "$hits" | sed 's/^/      /' >&2
+  return 1
+}
+
+# Path to a reference file, so callers never hand-build DUET_ROOT paths and a
+# moved file breaks in one place instead of nine.
+duet_ref () { printf '%s/reference/%s' "$DUET_ROOT" "$1"; }
+
+# The reference set injected into EVERY delegated call, in reading order. It is
+# re-injected at every phase boundary because prompt text does not survive
+# context compaction and a system-prompt file does.
+duet_ref_set () {
+  printf '%s\n' \
+    "$(duet_ref persona.md)" \
+    "$(duet_ref standing-rules.md)" \
+    "$(duet_ref output-format.md)" \
+    "$(duet_ref definition-of-done.md)"
+}
+
+# ---------- concurrency -----------------------------------------------------
+# Two pools, one ceiling. Claude and Codex bill against different accounts and
+# rate limit independently, so a single shared number could only ever be wrong
+# for one of them. The ceiling still applies to the sum, because the thing being
+# protected is the human's afternoon, not either vendor's quota.
+
+duet_clamp_int () {   # <value> <default> <max>
+  local v="$1" def="$2" max="$3"
+  case "$v" in ''|*[!0-9]*) v="$def" ;; esac
+  [ "$v" -lt 1 ] && v=1
+  [ "$v" -gt "$max" ] && v="$max"
+  printf '%s' "$v"
+}
+
+# duet_max_agents_for <claude|codex>
+duet_max_agents_for () {
+  local side="$1" want
+  want="$(duet_cfg "agents.${side}.max" "")"
+  [ -z "$want" ] && want="$(duet_cfg agents.max "$DUET_SIDE_DEFAULT")"
+  duet_clamp_int "$want" "$DUET_SIDE_DEFAULT" "$DUET_MAX_AGENTS_CEILING"
+}
+
+# The sum, clamped. Nothing may raise it past the ceiling: a user may lower a
+# cap, and no phase may quietly grant itself a bigger budget.
 duet_max_agents () {
-  local want; want="$(duet_cfg agents.max "$DUET_MAX_AGENTS_DEFAULT")"
-  case "$want" in ''|*[!0-9]*) want="$DUET_MAX_AGENTS_DEFAULT" ;; esac
-  [ "$want" -lt 1 ] && want=1
-  [ "$want" -gt "$DUET_MAX_AGENTS_CEILING" ] && want="$DUET_MAX_AGENTS_CEILING"
-  printf '%s' "$want"
+  local total=$(( $(duet_max_agents_for claude) + $(duet_max_agents_for codex) ))
+  [ "$total" -gt "$DUET_MAX_AGENTS_CEILING" ] && total="$DUET_MAX_AGENTS_CEILING"
+  printf '%s' "$total"
 }

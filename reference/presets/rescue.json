@@ -1,0 +1,196 @@
+{
+  "preset": "rescue",
+  "plain": "Repair an app that already exists and works badly.",
+  "$comment": "The order here is deliberately upside down. Every instinct says pick the repair strategy first and then work out what to build. That is exactly how a rescue goes wrong: the strategy gets chosen against the broken app's own idea of itself. So the correct instructions are written FIRST, from evidence, and only then is the strategy chosen against them.",
+  "last_intent_gate": 5,
+  "after_last_gate": "No more questions about intent. Fixing is work, not intent, and the fix loop runs autonomously to zero.",
+  "premise": "A broken app is usually built on broken documents. Existing markdown, comments and names are EVIDENCE OF INTENT, never statements of fact. Read them to learn what someone meant. Verify everything against the code and against current documentation before believing any of it.",
+  "stages": [
+    {
+      "id": "readback",
+      "title": "Read it back",
+      "plain": "Both agents read the repo. Claude says what it thinks the app does. You correct it.",
+      "owner": "claude",
+      "gate": "user",
+      "ask": "Here is what this app appears to do, who it appears to be for, and what appears to be broken. In plain English, no file names. Tell me what I got wrong.",
+      "rules": [
+        "State it as an observation, not a question. 'This looks like a booking tool for small clinics' beats 'what does this do'.",
+        "Name what you could not work out. A gap you admit is cheaper than a guess they have to catch.",
+        "This replaces asking for the idea. They already built it once."
+      ],
+      "done": "understanding.md holds the description the human confirmed or corrected, and a do-not-touch list, which may be empty.",
+      "also_ask": [
+        {
+          "q": "Anything in here I must not touch? A part that is fragile, or that somebody depends on in a way the code does not show.",
+          "why": "The load-bearing hack is invisible to an audit and expensive to discover by breaking it. Named now, it becomes a constraint. Named later, it is an outage."
+        }
+      ]
+    },
+    {
+      "id": "audit",
+      "title": "Truth audit",
+      "plain": "What is really in here: what runs, what is dead, what is out of date, what is unsafe.",
+      "owner": "codex",
+      "gate": "none",
+      "brief_must_ask": [
+        "Which routes, modules and dependencies are actually reachable from an entry point, and which are dead?",
+        "What is the real installed version of every dependency, and how far behind current is each?",
+        "Which dependencies are unmaintained, transferred, or carry advisories?",
+        "What environment variables and external services does this need to run, discovered from the code rather than from any .env.example?",
+        "Where does it break, and what is the first error in each case?",
+        "Where is data handled unsafely: secrets in the repo, unvalidated input, missing authorisation checks?",
+        "Where is it slow, measured rather than guessed?"
+      ],
+      "done": "audit.md, every claim carrying VERIFIED, CONTRADICTED or UNVERIFIABLE and a source. Existing docs cited as claims, never as facts.",
+      "gate_cmd": "test -s {{out}} && grep -qE 'VERIFIED|CONTRADICTED|UNVERIFIABLE' {{out}}"
+    },
+    {
+      "id": "docreset",
+      "title": "Document reset",
+      "plain": "Permission to delete the existing markdown and write it again from evidence.",
+      "owner": "claude",
+      "gate": "user",
+      "ask": "The existing documents describe an app that does not match the code. May I delete them and write new ones from what the code and the research actually say? I will list exactly which files, and anything you want kept, I keep.",
+      "rules": [
+        "List the files by path before asking. Never a blanket yes.",
+        "README.md, LICENSE, CHANGELOG and anything under .github are excluded from the ask by default: they face outward and are not agent instructions.",
+        "On no, the new documents are written alongside the old ones instead, and the conflict is recorded in decisions.md."
+      ],
+      "done": "The human answered, and the answer is recorded."
+    },
+    {
+      "id": "instructions",
+      "title": "Ground-up instructions",
+      "plain": "Write the correct architecture and documents, as if starting fresh today.",
+      "owner": "claude",
+      "gate": "none",
+      "writes": [
+        "CLAUDE.md",
+        "AGENTS.md",
+        "docs/architecture.md",
+        "docs/product.md",
+        "docs/decisions.md",
+        "docs/style.md",
+        "docs/testing.md",
+        "docs/done.md"
+      ],
+      "from": "reference/doc-templates/",
+      "rules": [
+        "Describe the app that SHOULD exist, grounded on the audit and on current documentation. Not the one that does.",
+        "Every deviation the existing code takes from this becomes a line item, which is what the next stage chooses between."
+      ],
+      "done": "The eight documents exist and are correct independently of the current code. This happens BEFORE the strategy choice, on purpose.",
+      "gate_cmd": "test -f CLAUDE.md && test -f AGENTS.md && test -d docs && ! grep -rqF '{{' CLAUDE.md AGENTS.md docs/"
+    },
+    {
+      "id": "strategy",
+      "title": "Repair strategy",
+      "plain": "Fix in place, rebuild the backend behind the same frontend, or rebuild from zero.",
+      "owner": "claude",
+      "gate": "user",
+      "options": [
+        {
+          "id": "fix",
+          "plain": "Fix what is there. Cheapest, keeps everything working, and it inherits whatever the original structure got wrong.",
+          "fits": "The structure is sound and the problems are defects."
+        },
+        {
+          "id": "backend",
+          "plain": "Keep the frontend exactly as it is, rebuild the backend behind it, reconnect. The screens do not change.",
+          "fits": "It looks right and behaves wrong. Most common answer for an app built fast by people who left."
+        },
+        {
+          "id": "rebuild",
+          "plain": "Start again from zero, carrying across the environment variables, the integrations and the data. Slowest, and the only one that removes the original decisions.",
+          "fits": "The architecture itself is the problem, or the dependency set cannot be brought current."
+        }
+      ],
+      "ask": "Present all three against THIS repo with honest cost, honest risk, and what breaks under each. Recommend one and say why. If two are close, say they are close.",
+      "done": "The human chose, and the choice plus the reasoning is in docs/decisions.md.",
+      "last_intent_gate": true,
+      "also_ask": [
+        {
+          "q": "I have everything I need. Should I run to the end and bring you the questions at the finish, or stop at each decision?",
+          "prefilled_from": "autonomy",
+          "options": {
+            "full": "Run to the end. Every question waits for the finish.",
+            "product": "Decide the technical things alone. Stop when it changes what someone sees or reads.",
+            "off": "Stop at every decision."
+          },
+          "why": "Asked here rather than at setup because this is the moment the person actually knows how much they trust the plan. The setup answer is the default, not the verdict."
+        }
+      ]
+    },
+    {
+      "id": "inventory",
+      "title": "Feature inventory",
+      "plain": "Write down everything that works today, before touching anything.",
+      "owner": "both",
+      "gate": "none",
+      "$comment": "This is the stage that stops a rescue destroying the app. Without a baseline, 'zero errors' is reachable by deleting whatever errors. With one, that shortcut fails a check.",
+      "rules": [
+        "Every user-visible behaviour that works today, listed as a sentence anyone can test by hand.",
+        "Include the ones nobody mentioned. Undocumented behaviour that someone depends on is the most expensive thing to lose.",
+        "Anything already broken is listed as broken, so it is not mistaken for a regression later."
+      ],
+      "done": "inventory.md, and it is the acceptance list the final stage is checked against.",
+      "gate_cmd": "test -s inventory.md"
+    },
+    {
+      "id": "execute",
+      "title": "Execute",
+      "plain": "Do the chosen strategy. Claude on the frontend and the words, Codex underneath.",
+      "owner": "split",
+      "owners": {
+        "claude": "frontend, components, layout, and every word the user reads",
+        "codex": "backend, database, integrations, environment, deployment"
+      },
+      "gate": "none",
+      "rules": [
+        "Standing rule 9 governs every change: repair the defect, never remove the feature.",
+        "On the backend strategy, the frontend is COPIED, not rewritten. Changing it is a separate decision, taken later, in daylight.",
+        "On the rebuild strategy, environment variables, integration credentials and data migration are planned before the first line, not discovered at the end."
+      ],
+      "done": "Every item in audit.md is fixed or explicitly deferred with a reason.",
+      "gate_cmd": "{{cmd.typecheck}} && {{cmd.lint}}"
+    },
+    {
+      "id": "tests",
+      "title": "Tests",
+      "plain": "Tests to the coverage floor, plus one per feature on the inventory.",
+      "owner": "codex",
+      "gate": "none",
+      "done": "Suite green, coverage at or above done.coverageMin, and every inventory item has a test.",
+      "gate_cmd": "{{cmd.test}}"
+    },
+    {
+      "id": "debate",
+      "title": "Debate",
+      "plain": "Both agents review the repair and argue about it once.",
+      "owner": "both",
+      "gate": "none",
+      "done": "Every concern is fixed, defended with a reason, or in the final question round.",
+      "gate_cmd": "test -s {{out}}"
+    },
+    {
+      "id": "polish",
+      "title": "Polish",
+      "plain": "Read it as a person. No em dashes, no AI-looking design, no filler.",
+      "owner": "claude",
+      "gate": "none",
+      "done": "docs/style.md holds the rules, and the product obeys them.",
+      "gate_cmd": "duet_no_emdash . && {{cmd.lint}}"
+    },
+    {
+      "id": "done",
+      "title": "Done",
+      "plain": "Zero outstanding issues, and everything on the inventory still works.",
+      "owner": "both",
+      "gate": "none",
+      "spec": "reference/definition-of-done.md",
+      "done": "Zero outstanding locally, in tests and deployed, AND every item in inventory.md verified working. A feature lost to a fix is a failed rescue, not a tidy one.",
+      "gate_cmd": "{{cmd.install}} && {{cmd.typecheck}} && {{cmd.lint}} && {{cmd.test}}"
+    }
+  ],
+  "gate_cmd_note": "A stage is done when its gate_cmd exits zero, not when an agent says so. {{cmd.X}} resolves from commands.* in .duet/config.json, detected once by lib/duet-detect.sh. {{out}} is the phase output path. Human gates carry no command, because 'the human confirmed' is not a command."
+}

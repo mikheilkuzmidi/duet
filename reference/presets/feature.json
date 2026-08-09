@@ -1,0 +1,115 @@
+{
+  "preset": "feature",
+  "plain": "Add a feature to an app that already exists.",
+  "$comment": "Shorter than app because the hard questions were answered once already. If docs/architecture.md is missing, this preset is the wrong one: run rescue, or duet-app for a project that never had documents.",
+  "last_intent_gate": 2,
+  "after_last_gate": "No more questions about intent. Everything accumulates into the single final round with a recommendation attached.",
+  "stages": [
+    {
+      "id": "read",
+      "title": "Read the project",
+      "plain": "Load the existing documents and check they still match the code.",
+      "owner": "claude",
+      "gate": "none",
+      "rules": [
+        "Read CLAUDE.md, AGENTS.md and docs/ first. That is what they are for.",
+        "Spot-check them against the code. A document that has drifted is worse than none, and saying so takes one line.",
+        "If they have drifted badly, stop and recommend duet-rescue rather than building on them."
+      ],
+      "done": "A one-line verdict: documents match, or they do not and here is where.",
+      "gate_cmd": "test -f CLAUDE.md || test -f docs/architecture.md || test -f AGENTS.md"
+    },
+    {
+      "id": "scope",
+      "title": "Scope",
+      "plain": "What the feature does, and what it deliberately does not.",
+      "owner": "claude",
+      "gate": "user",
+      "ask": "What should this do, and is there anything nearby it should deliberately NOT do? Grilling depth follows the setup answer.",
+      "done": "spec.md holds acceptance criteria and an explicit out-of-scope list.",
+      "last_intent_gate": true,
+      "also_ask": [
+        {
+          "q": "I have everything I need. Should I run to the end and bring you the questions at the finish, or stop at each decision?",
+          "prefilled_from": "autonomy",
+          "options": {
+            "full": "Run to the end. Every question waits for the finish.",
+            "product": "Decide the technical things alone. Stop when it changes what someone sees or reads.",
+            "off": "Stop at every decision."
+          },
+          "why": "Asked here rather than at setup because this is the moment the person actually knows how much they trust the plan. The setup answer is the default, not the verdict."
+        }
+      ]
+    },
+    {
+      "id": "research",
+      "title": "Research",
+      "plain": "Codex checks what is current for anything new this touches.",
+      "owner": "codex",
+      "gate": "none",
+      "skip_when": "The feature uses nothing outside the existing dependency set and touches no external API.",
+      "brief_must_ask": [
+        "What is the current API surface of everything new this feature needs, with signatures rather than summaries?",
+        "Does the version in this project's lockfile support the approach, and what is the evidence?",
+        "What changed recently enough that a model trained earlier would get it wrong?"
+      ],
+      "done": "A briefing where every claim carries a verdict and a source.",
+      "gate_cmd": "test -s {{out}}"
+    },
+    {
+      "id": "plan",
+      "title": "Plan",
+      "plain": "Which files change, in what order, and how anyone can tell it worked.",
+      "owner": "claude",
+      "gate": "none",
+      "done": "A phase list with owners, grounded on the briefing, checked against docs/architecture.md.",
+      "gate_cmd": "test -s {{out}}"
+    },
+    {
+      "id": "build",
+      "title": "Build",
+      "plain": "Claude on the frontend and the words, Codex underneath.",
+      "owner": "split",
+      "owners": {
+        "claude": "frontend, components, layout, and every word the user reads",
+        "codex": "backend, database, integrations, environment, deployment"
+      },
+      "gate": "none",
+      "rules": [
+        "Follow the project's existing patterns. A feature that looks imported from another codebase is a defect even when it works.",
+        "An architecture change is a decision. It goes in docs/decisions.md or it does not happen."
+      ],
+      "done": "Every acceptance criterion has code behind it.",
+      "gate_cmd": "{{cmd.typecheck}} && {{cmd.lint}}"
+    },
+    {
+      "id": "tests",
+      "title": "Tests",
+      "plain": "Codex writes them, at the project's existing level plus the new paths.",
+      "owner": "codex",
+      "gate": "none",
+      "done": "Suite green, coverage not lower than before, new paths covered.",
+      "gate_cmd": "{{cmd.test}}"
+    },
+    {
+      "id": "debate",
+      "title": "Debate",
+      "plain": "Both agents review the change and argue about it once.",
+      "owner": "both",
+      "gate": "none",
+      "done": "Every concern is fixed, defended with a reason, or in the final question round.",
+      "gate_cmd": "test -s {{out}}"
+    },
+    {
+      "id": "done",
+      "title": "Done",
+      "plain": "Zero outstanding issues, and nothing that worked before is worse.",
+      "owner": "both",
+      "gate": "none",
+      "spec": "reference/definition-of-done.md",
+      "done": "Zero outstanding locally, in tests and deployed, and no regression in existing behaviour.",
+      "gate_cmd": "{{cmd.typecheck}} && {{cmd.lint}} && {{cmd.test}}"
+    }
+  ],
+  "gate_cmd_note": "A stage is done when its gate_cmd exits zero, not when an agent says so. {{cmd.X}} resolves from commands.* in .duet/config.json, detected once by lib/duet-detect.sh. {{out}} is the phase output path. Human gates carry no command, because 'the human confirmed' is not a command."
+}

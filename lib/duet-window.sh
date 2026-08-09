@@ -78,14 +78,14 @@ EOF
 # than failing, because the window is a nicety and the pipeline is not.
 duet_window_send () {   # <prompt-file>
   local prompt="$1"
-  python3 - "$DUET_WS_URL" "$prompt" <<'PY'
+  python3 - "$DUET_WS_URL" "$prompt" "$DUET_VERSION" <<'PY'
 import asyncio,json,sys,time
 try:
     import websockets
 except ImportError:
     print("websockets not installed; falling back to headless delegation", file=sys.stderr)
     sys.exit(3)
-url, path = sys.argv[1], sys.argv[2]
+url, path, ver = sys.argv[1], sys.argv[2], sys.argv[3]
 text = open(path).read()
 
 async def rpc(ws, rid, method, params, timeout=300):
@@ -99,7 +99,7 @@ async def rpc(ws, rid, method, params, timeout=300):
 async def main():
     async with websockets.connect(url, max_size=64*1024*1024) as ws:
         await rpc(ws,1,"initialize",
-                  {"clientInfo":{"name":"duet","version":"0.1.0"},
+                  {"clientInfo":{"name":"duet","version":ver},
                    "capabilities":{"experimentalApi":True}})
         r=await rpc(ws,2,"thread/loaded/list",{})
         threads=(r.get("result") or {}).get("data") or []

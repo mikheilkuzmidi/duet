@@ -1,0 +1,111 @@
+{
+  "preset": "skill",
+  "plain": "Build a new agent skill.",
+  "$comment": "A skill is mostly prompt, which makes it the easiest thing in the world to write badly and never notice. The two stages people skip are the two that matter: what it must NEVER do, and testing that it actually fires when it should.",
+  "last_intent_gate": 3,
+  "after_last_gate": "No more questions about intent.",
+  "stages": [
+    {
+      "id": "idea",
+      "title": "Idea",
+      "plain": "What the skill does, in one sentence.",
+      "owner": "claude",
+      "gate": "user",
+      "ask": "What should this skill do? One sentence. If it takes two, it may be two skills.",
+      "done": "One sentence, and a note of anything nearby that is deliberately a different skill."
+    },
+    {
+      "id": "triggers",
+      "title": "Triggers",
+      "plain": "What someone says or does that should make this fire.",
+      "owner": "claude",
+      "gate": "user",
+      "ask": "What would you have typed, the moment you wanted this? Give real phrasings, including lazy ones.",
+      "rules": [
+        "Collect real phrasings, not canonical ones. Nobody types the canonical one.",
+        "Also collect near misses that must NOT fire it. A skill that fires too often gets uninstalled faster than one that never fires."
+      ],
+      "done": "A list of should-fire phrasings and a list of must-not-fire ones."
+    },
+    {
+      "id": "guardrails",
+      "title": "Never do this",
+      "plain": "The things it must refuse or hand back, before any of it is written.",
+      "owner": "claude",
+      "gate": "user",
+      "ask": "What should this skill never do on its own? Anything expensive, destructive, or outward-facing?",
+      "done": "A short list, each with the reason, because a rule with a reason survives a case it did not anticipate.",
+      "last_intent_gate": true,
+      "also_ask": [
+        {
+          "q": "I have everything I need. Should I run to the end and bring you the questions at the finish, or stop at each decision?",
+          "prefilled_from": "autonomy",
+          "options": {
+            "full": "Run to the end. Every question waits for the finish.",
+            "product": "Decide the technical things alone. Stop when it changes what someone sees or reads.",
+            "off": "Stop at every decision."
+          },
+          "why": "Asked here rather than at setup because this is the moment the person actually knows how much they trust the plan. The setup answer is the default, not the verdict."
+        }
+      ]
+    },
+    {
+      "id": "research",
+      "title": "Research",
+      "plain": "Codex checks how the host actually loads skills right now.",
+      "owner": "codex",
+      "gate": "none",
+      "brief_must_ask": [
+        "What is the current required structure of a skill for each target host, and where is that documented?",
+        "Which frontmatter fields exist today, which are required, and what are the real limits on each?",
+        "How is a skill's description used to decide when it fires?",
+        "What changed recently enough that a model trained earlier would get it wrong?"
+      ],
+      "done": "A briefing with the current file layout and frontmatter contract, each claim sourced.",
+      "gate_cmd": "test -s {{out}}"
+    },
+    {
+      "id": "write",
+      "title": "Write it",
+      "plain": "SKILL.md and any reference files, grounded on the research.",
+      "owner": "claude",
+      "gate": "none",
+      "rules": [
+        "The description is the trigger. Write it for matching, and make it short enough to read in a list.",
+        "Instructions state what and why. A rule with a reason adapts to a case it never anticipated; a rule without one breaks on the first unusual input.",
+        "Anything long, stable or reference-shaped goes in a separate file, not in SKILL.md."
+      ],
+      "done": "The skill exists and its structure matches what the research established, not what was remembered.",
+      "gate_cmd": "test -f SKILL.md && head -1 SKILL.md | grep -q '^---$'"
+    },
+    {
+      "id": "triggertest",
+      "title": "Trigger test",
+      "plain": "Say the real phrasings and check it fires. Say the near misses and check it does not.",
+      "owner": "both",
+      "gate": "none",
+      "done": "Every should-fire phrase fires it. Every must-not-fire phrase does not. Failures are fixed in the description, which is where triggering is decided.",
+      "gate_cmd": "test -s {{out}}"
+    },
+    {
+      "id": "debate",
+      "title": "Debate",
+      "plain": "Both agents review the skill and argue about it once.",
+      "owner": "both",
+      "gate": "none",
+      "done": "Every concern is fixed, defended with a reason, or in the final question round.",
+      "gate_cmd": "test -s {{out}}"
+    },
+    {
+      "id": "done",
+      "title": "Done",
+      "plain": "It installs, it fires, it does the thing, and it refuses what it should.",
+      "owner": "both",
+      "gate": "none",
+      "spec": "reference/definition-of-done.md",
+      "done": "Installed from a clean state, triggers verified both ways, one real task completed end to end, guardrails checked.",
+      "gate_cmd": "test -f SKILL.md && grep -q '^name:' SKILL.md && grep -q '^description:' SKILL.md"
+    }
+  ],
+  "gate_cmd_note": "A stage is done when its gate_cmd exits zero, not when an agent says so. {{cmd.X}} resolves from commands.* in .duet/config.json, detected once by lib/duet-detect.sh. {{out}} is the phase output path. Human gates carry no command, because 'the human confirmed' is not a command."
+}
