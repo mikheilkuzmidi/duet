@@ -8,12 +8,20 @@
 # Claude work out to sub-sessions, but nothing here drives Duet from Codex.
 
 # shellcheck source=duet-common.sh
-. "$(dirname "${BASH_SOURCE[0]}")/duet-common.sh"
-. "$(dirname "${BASH_SOURCE[0]}")/duet-models.sh"
-. "$(dirname "${BASH_SOURCE[0]}")/duet-host.sh"
-. "$(dirname "${BASH_SOURCE[0]}")/duet-progress.sh"
-. "$(dirname "${BASH_SOURCE[0]}")/duet-goal.sh"
-. "$(dirname "${BASH_SOURCE[0]}")/duet-preflight.sh"   # duet_fastmode
+# Locate siblings via DUET_ROOT, never via BASH_SOURCE alone.
+#
+# BASH_SOURCE IS EMPTY UNDER ZSH, which is the default shell on macOS and the
+# one Claude Code's Bash tool runs. `dirname ""` yields ".", so every sibling
+# source became ./duet-x.sh and failed. That made the whole goal path
+# unreachable from the very shell the skills tell the orchestrator to use, and
+# it survived every test that happened to run under `bash -c`.
+: "${DUET_ROOT:=$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")/.." && pwd)}"
+. "$DUET_ROOT/lib/duet-common.sh"
+. "$DUET_ROOT/lib/duet-models.sh"
+. "$DUET_ROOT/lib/duet-host.sh"
+. "$DUET_ROOT/lib/duet-progress.sh"
+. "$DUET_ROOT/lib/duet-goal.sh"
+. "$DUET_ROOT/lib/duet-preflight.sh"   # duet_fastmode
 
 DUET_BASH_CEILING=600   # Claude Code's own Bash tool timeout, in seconds
 
@@ -44,9 +52,16 @@ duet_brief_check () {   # <brief file> ; returns 1 if anything was flagged
 # delegated call. Re-injected at every phase boundary because prompt text does
 # not survive context compaction and a system-prompt file does.
 
+# The run context goes FIRST, before the reference files. The rules are the same
+# for every run; the settings are what makes this one different, and an agent
+# that reads them last has already formed a plan without them.
+#
+# DUET_STAGE_LABEL and DUET_GATE_CMD are set by the caller when a preset stage
+# is being run, so the agent knows where it is and what it is being measured by.
 duet_compose_context () {   # <dest> [extra files...]
   local dest="$1"; shift
   : > "$dest"
+  duet_context_block "${DUET_STAGE_LABEL:-}" "${DUET_GATE_CMD:-}" >> "$dest"
   local f
   while IFS= read -r f; do
     [ -f "$f" ] && { cat "$f" >> "$dest"; printf '\n\n' >> "$dest"; }
@@ -190,13 +205,15 @@ duet_gate_check () {   # <gate command> <cwd>
   ( cd "$cwd" && eval "$cmd" ) >/dev/null 2>&1
 }
 
-# duet_work_codex <objective-file> <cwd> <out.jsonl>
-# The reference set rides in as developerInstructions on the thread rather than
-# being prepended to the prompt, which keeps the objective a clean single block.
+# duet_work_codex <objective-file> <cwd> <out.jsonl> [briefing-file]
+#
+# The reference set AND any phase briefing ride in as developerInstructions on
+# the thread, never in the objective. The objective is capped at 4000 characters
+# by the goal API, so a briefing put there fails the whole call.
 duet_work_codex () {
-  local obj="$1" cwd="${2:-$PWD}" out="${3:-/dev/stdout}" dev rc
+  local obj="$1" cwd="${2:-$PWD}" out="${3:-/dev/stdout}" brief="${4:-}" dev rc
   dev="$(mktemp)"
-  duet_compose_context "$dev" "$(duet_ref goal-format.md)"
+  duet_compose_context "$dev" "$brief"
   duet_fastmode 2>/dev/null && export DUET_FASTMODE_APPROVE=1
   duet_goal_run "$obj" "$cwd" "$out" "$dev"
   rc=$?

@@ -1,5 +1,93 @@
 # Changelog
 
+## 0.4.0
+
+Closing the gap between what Duet said and what Duet did. Auditing 0.3.1 before
+calling it finished turned up three defects with one shape: the documentation
+described more than the code performed, which is the exact failure standing rule
+7 forbids and the one this repo can least afford.
+
+- **The skills now reach for the goal machinery.** `duet_work_codex`,
+  `duet_work_claude` and `reference/goal-format.md` were built, verified and
+  then mentioned by no skill at all, so the headline feature of 0.3.0 was
+  unreachable in practice. The orchestrator skill, the build skill and all four
+  presets now name the runner, resolve the stage gate first, and read the exit
+  code through `duet_goal_explain`.
+- **The run context reaches the agent.** `autonomy`, `voice`, the coverage
+  floor, the safety mode and the detected project commands were written to
+  `.duet/config.json` at setup and then told to nobody. A delegated agent under
+  `autonomy=full` was never informed it must not stop to ask. Every call now
+  opens with a generated "This run" block, ahead of the static reference files,
+  because rules are the same everywhere and settings are what make this run
+  different.
+- **`digest` is implemented rather than described.** It condenses the agent's
+  own words every `progress.digestEverySec` with a deliberately cheap Haiku
+  call. Setup's warning that it uses extra quota is now true.
+- **Setup runs itself.** First use in a repo asks the questions and then carries
+  straight on with what was actually asked, instead of warning and stopping.
+- **Claude moves to `opus[1m]` at `xhigh`**, for the rescue preset where a large
+  codebase must be in view at once, and for long goals where mid-run compaction
+  is what loses the plot.
+
+### Verified
+
+0.4.0 is the first version that has been run end to end. `/duet:duet-skill` was
+run to completion to build `duet-release`, the skill that cuts a release, and
+the artifacts are kept in `docs/shakedown/`. It found four defects that reading
+would never have surfaced: the zsh sourcing failure, the zsh infinite loop in
+gate resolution, the undocumented 4000-character objective cap, and a trigger
+test that could not tell a missing file from an absent phrase. The first three
+are fixed here; the fourth is fixed in the skill preset.
+
+### Added
+
+- `skills/duet-release/`, written by the pipeline during the shakedown rather
+  than by hand, and kept because it is genuinely useful.
+- `docs/shakedown/`, the run's real output: the spec, the research briefing with
+  its sourced verdicts, the debate concerns and the answer to them.
+
+### Fixed
+
+- **The libraries could not be sourced from zsh**, which is the default shell on
+  macOS and the one Claude Code's Bash tool runs. `${BASH_SOURCE[0]}` is empty
+  there, so every sibling `source` resolved to `./duet-x.sh` and failed. The
+  goal path was therefore unreachable from the exact shell the skills told the
+  orchestrator to use, and it survived every test that happened to run under
+  `bash -c`. Libraries now locate each other through `DUET_ROOT`, and the skills
+  call `duet` subcommands instead of sourcing anything.
+- **`duet_gate_resolve` looped forever under zsh.** It read `${BASH_REMATCH[1]}`
+  expecting the first capture group; zsh puts the whole match there, so the
+  placeholder was never consumed. A hang is the worst failure shape available:
+  no error, no output, and the human kills the run believing the model is
+  thinking. It now substitutes by iterating known keys, with no regex at all.
+- **A goal objective is capped at 4000 characters**, which is in no
+  documentation this repo could find and was discovered by sending 9,237 and
+  reading the error. Duet now refuses an over-long objective with a message
+  naming the limit, rather than truncating: the exit gate lives at the end of
+  the block, so truncation would silently discard the line that decides when the
+  work is finished. Briefings belong in developer instructions, which have no
+  such cap, and `duet goal codex` takes one as its fourth argument.
+
+### Added
+
+- `duet delegate`, `duet goal` and `duet context` subcommands, so nothing has to
+  source a shell library to drive a phase.
+
+### Fixed
+
+- **`duet_progress_excerpt` found nothing in a real stream**, so digest was
+  calling it, receiving an empty string and silently returning. Agent text
+  arrives as `params.delta` on `item/agentMessage/delta` and has to be
+  reassembled per item, which it now does.
+- **The progress parser knew only one of Codex's two stream shapes.** The
+  app-server uses slashed names with the payload under `params`; `exec --json`
+  uses dotted names with the payload at top level. Briefing phases therefore
+  reported "35 events" instead of what the agent was doing. Both shapes are
+  documented at the top of `duet-progress.sh` and one parser serves both.
+- The heartbeat's cumulative figure is labelled `ctx`, not `tok`. It counts
+  context processed including cached input, and printing 125.0k next to a goal
+  reporting 20,038 read as a contradiction.
+
 ## 0.3.1
 
 Models pinned to what was asked for, and three bugs that pinning exposed.

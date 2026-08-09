@@ -1,2 +1,4 @@
 .duet/
 *.err
+__pycache__/
+*.pyc

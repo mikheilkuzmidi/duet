@@ -8,6 +8,13 @@ description: Set this repo wide open in one step, for people who read diffs. Use
 The express path. One command instead of ten questions, set as open as Duet
 goes.
 
+## Before anything
+
+Run `duet doctor`. **If it reports the repo is not set up, run the
+`duet-setup` skill now, to completion, then carry straight on with what was
+asked.** The human asked for something; setup is the questions Duet needs before
+it can do it, not a separate errand for them to run.
+
 **This is for professionals.** Say so, show what it turns on, and get one
 deliberate confirmation before writing anything.
 

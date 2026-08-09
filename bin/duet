@@ -29,7 +29,11 @@ case "$cmd" in
   doctor)
     duet_preflight || true
     duet_step "Models"
-    duet_say "  claude: $(duet_claude_model) at effort $(duet_claude_effort)"
+    cm="$(duet_claude_model)"
+    case "$cm" in
+      *"[1m]") duet_say "  claude: $cm at effort $(duet_claude_effort)  (1,000,000 context)" ;;
+      *)       duet_say "  claude: $cm at effort $(duet_claude_effort)" ;;
+    esac
     m="$(duet_codex_model)"
     duet_say "  codex : ${m:-<catalog unavailable>} at effort $(duet_codex_effort "$m")"
     duet_step "GitHub"
@@ -63,6 +67,44 @@ case "$cmd" in
     duet_setup_apply "$@" || exit 1
     duet_detect_show >/dev/null 2>&1 && duet_detect_save >/dev/null 2>&1
     duet_setup_report
+    ;;
+
+  delegate)
+    # Delegation as a SUBCOMMAND, so the orchestrator never sources a shell
+    # library. bin/duet has a bash shebang; the caller's shell is irrelevant.
+    # This exists because the skills used to say "source lib/duet-delegate.sh",
+    # which fails or hangs under zsh, the default shell on macOS and the one
+    # Claude Code's Bash tool runs.
+    . "$DUET_ROOT/lib/duet-delegate.sh"
+    sub="${1:-}"; shift 2>/dev/null || true
+    case "$sub" in
+      codex)  duet_delegate_codex  "$@" ;;
+      claude) duet_delegate_claude "$@" ;;
+      *) duet_say "usage: duet delegate codex  <brief> <cwd> <out.jsonl>"
+         duet_say "       duet delegate claude <brief> <task> <cwd> <out.json>"; exit 1 ;;
+    esac
+    ;;
+
+  goal)
+    # Work that must come back finished, rather than merely stopped.
+    . "$DUET_ROOT/lib/duet-delegate.sh"
+    sub="${1:-}"; shift 2>/dev/null || true
+    case "$sub" in
+      codex)  duet_work_codex  "$@"; rc=$? ;;
+      claude) duet_work_claude "$@"; rc=$? ;;
+      status) duet_rate_limits; exit 0 ;;
+      *) duet_say "usage: duet goal codex  <objective> <cwd> <out.jsonl>"
+         duet_say "       duet goal claude <objective> <cwd> <out.json> <gate>"
+         duet_say "       duet goal status                 # real rate limits"; exit 1 ;;
+    esac
+    duet_say "  $(duet_goal_explain $rc)"
+    exit $rc
+    ;;
+
+  context)
+    # What a delegated agent is told about THIS run. Printing it is how you
+    # check that a setting reached the agent rather than merely being stored.
+    duet_context_block "${1:-}" "${2:-}"
     ;;
 
   detect)
@@ -154,7 +196,14 @@ print(d["stages"][i-1].get("gate_cmd",""))' "$(duet_preset_file "$1")" "${2:-1}"
       (duet_has gh && gh api repos/mikheilkuzmidi/duet/releases/latest --jq .tag_name 2>/dev/null > "$cache") &
     fi
     latest="$(cat "$cache" 2>/dev/null | tr -d 'v[:space:]')"
+    # Compare by ORDER, not inequality. The old test warned that 0.1.0 was
+    # "newer" than 0.4.0, which is the kind of thing that teaches people to
+    # ignore upgrade notices.
+    newer=""
     if [ -n "$latest" ] && [ "$latest" != "$DUET_VERSION" ]; then
+      newer="$(printf '%s\n%s\n' "$DUET_VERSION" "$latest" | sort -V | tail -1)"
+    fi
+    if [ -n "$newer" ] && [ "$newer" = "$latest" ]; then
       duet_warn "a newer Duet is available ($latest). Upgrade:"
       duet_say  "  codex plugin marketplace upgrade duet"
       duet_say  "  claude: /plugin marketplace update mikheilkuzmidi/duet"
@@ -169,6 +218,9 @@ duet: Claude leads, Codex checks the facts.
   duet setup [k=v ...]   configure this repo. --show to read it back
   duet setup --max       max allowance: wide open, for people who read diffs
   duet detect [--save]   this project's install, test, lint, deploy commands
+  duet delegate ...      hand a brief to codex or claude
+  duet goal ...          hand work over as a goal, which ends on a command
+  duet context [stage]   what a delegated agent is told about this run
   duet gate <preset> <n> the command that decides whether stage n is done
   duet status            which stage the current run is on
   duet presets [name]    the fixed stage lists

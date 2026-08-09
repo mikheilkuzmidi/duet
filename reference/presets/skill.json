@@ -85,7 +85,12 @@
       "owner": "both",
       "gate": "none",
       "done": "Every should-fire phrase fires it. Every must-not-fire phrase does not. Failures are fixed in the description, which is where triggering is decided.",
-      "gate_cmd": "test -s {{out}}"
+      "gate_cmd": "test -s {{out}} && ! grep -q 'cannot read' {{out}}",
+      "rules": [
+        "Assert the skill file EXISTS before interpreting any match result. A grep against a missing file returns non-zero exactly as a phrase-not-found does, so a probe that maps both to success reports a pass for a skill that was never written. Found by the debate stage doing precisely this.",
+        "Report three states, not two: fires, does not fire, and cannot read. Collapsing the third into either of the first two is what makes a green trigger test meaningless.",
+        "The description is where triggering is decided, so failures are fixed there rather than in the body."
+      ]
     },
     {
       "id": "debate",

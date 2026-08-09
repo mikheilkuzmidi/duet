@@ -11,7 +11,15 @@
 # afterwards too.
 
 # shellcheck source=duet-common.sh
-. "$(dirname "${BASH_SOURCE[0]}")/duet-common.sh"
+# Locate siblings via DUET_ROOT, never via BASH_SOURCE alone.
+#
+# BASH_SOURCE IS EMPTY UNDER ZSH, which is the default shell on macOS and the
+# one Claude Code's Bash tool runs. `dirname ""` yields ".", so every sibling
+# source became ./duet-x.sh and failed. That made the whole goal path
+# unreachable from the very shell the skills tell the orchestrator to use, and
+# it survived every test that happened to run under `bash -c`.
+: "${DUET_ROOT:=$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")/.." && pwd)}"
+. "$DUET_ROOT/lib/duet-common.sh"
 
 # ---------- Claude ----------------------------------------------------------
 # Tier aliases are documented to track the newest model over time, which is the
@@ -21,8 +29,14 @@
 # VERIFIED on claude 2.1.226, by running each alias and reading modelUsage back:
 #
 #   --model best      -> claude-fable-5      NOT Opus
-#   --model opus      -> claude-opus-5
-#   --model opus[1m]  -> claude-opus-5[1m]   1M context, same canonical model
+#   --model opus      -> claude-opus-5        200k context
+#   --model opus[1m]  -> claude-opus-5[1m]    1,000,000 context, same model
+#
+# THE DEFAULT IS opus[1m]. The 1M window is chosen for two phases specifically:
+# the rescue preset, where an agent may need a large existing codebase in view
+# at once, and any long autonomous goal, where compaction mid-run is the thing
+# most likely to lose the plot. Same model, same price per token; you pay only
+# for what you actually put in the window.
 #
 # The docs explain it: `best` means "Fable where your organization has access to
 # it, otherwise the latest Opus". So Duet defaulting to `best` was quietly
@@ -45,7 +59,7 @@
 # --effort flag. A tool that shells out must unset it or it will report one
 # effort and get another. duet_delegate_claude does exactly that.
 
-duet_claude_model  () { duet_cfg models.claude.model  "opus"; }
+duet_claude_model  () { duet_cfg models.claude.model  "opus[1m]"; }
 duet_claude_effort () { duet_cfg models.claude.effort "xhigh"; }
 
 # ---------- Codex -----------------------------------------------------------

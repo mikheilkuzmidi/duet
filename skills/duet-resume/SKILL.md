@@ -7,6 +7,13 @@ description: Continue a run that stopped, re-running only the phase that failed.
 
 Continue a run that stopped. Re-run the dead phase, not the run.
 
+## Before anything
+
+Run `duet doctor`. **If it reports the repo is not set up, run the
+`duet-setup` skill now, to completion, then carry straight on with what was
+asked.** The human asked for something; setup is the questions Duet needs before
+it can do it, not a separate errand for them to run.
+
 ## Finding the resume point
 
 A phase is complete **if and only if its output file exists**. Outputs are

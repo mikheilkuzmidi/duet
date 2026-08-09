@@ -13,7 +13,15 @@
 # keyed by the run id, so republishing never duplicates.
 
 # shellcheck source=duet-common.sh
-. "$(dirname "${BASH_SOURCE[0]}")/duet-common.sh"
+# Locate siblings via DUET_ROOT, never via BASH_SOURCE alone.
+#
+# BASH_SOURCE IS EMPTY UNDER ZSH, which is the default shell on macOS and the
+# one Claude Code's Bash tool runs. `dirname ""` yields ".", so every sibling
+# source became ./duet-x.sh and failed. That made the whole goal path
+# unreachable from the very shell the skills tell the orchestrator to use, and
+# it survived every test that happened to run under `bash -c`.
+: "${DUET_ROOT:=$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")/.." && pwd)}"
+. "$DUET_ROOT/lib/duet-common.sh"
 
 duet_gh_ready () {
   duet_has gh || { duet_warn "gh not installed; staying local"; return 1; }

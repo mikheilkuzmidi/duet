@@ -49,11 +49,12 @@ codex plugin marketplace add mikheilkuzmidi/duet
 codex plugin add duet@duet
 ```
 
-Then, once per machine and once per repo:
+Then just use it. **The first time Duet runs in a repo it asks its setup
+questions and then carries on with whatever you actually asked for**, so there
+is no separate setup step to remember.
 
 ```bash
-duet doctor          # both CLIs, auth, models, caps
-/duet:duet-setup     # ten questions, answers stay on this machine
+duet doctor          # both CLIs, auth, models, caps, if you want to look first
 ```
 
 ![duet doctor](assets/doctor.png)
@@ -87,6 +88,9 @@ The pieces also work on their own:
 | `/duet:duet-status` | which stage the run got to |
 | `duet detect` | this project's install, test, lint and deploy commands |
 | `duet gate <preset> <n>` | the command that decides whether stage n is done |
+| `duet goal codex` | hand work over as a goal, which ends on a command |
+| `duet delegate codex` | hand over a briefing, which ends on a deliverable |
+| `duet context` | what a delegated agent is told about this run |
 
 `/duet:duet-debate` on a branch you wrote by hand is probably the fastest way to
 see whether this is useful to you.
@@ -114,6 +118,13 @@ agrees about what working means. A gate whose command is not configured fails
 loudly and says which key is missing, rather than passing because there was
 nothing to run.
 
+**An objective is capped at 4000 characters**, which is documented nowhere and
+was found by sending 9,237 and reading the error back. That cap is why a
+briefing goes into the developer instructions rather than the objective: Duet
+refuses an over-long objective instead of truncating it, because the gate is the
+last line of the block and truncation would silently discard the one thing that
+decides when the work is done.
+
 ![A goal running to completion](assets/goal.png)
 
 That is a real run: Codex took the objective, worked unattended, stated its one
@@ -122,6 +133,14 @@ was asked for, and finished when the gate command passed.
 
 Claude has no goal API, so its side is the same property built from verified
 parts: run, check the gate, resume the session, repeat until it passes.
+
+Every delegated call also opens with the settings for **this** run, generated
+fresh: the autonomy level, the voice, the coverage floor, the safety mode, which
+stage this is and the exact command it will be judged by. The standing rules are
+the same everywhere; these are what make one run different from another, and an
+agent under `autonomy=full` that was never told must not be expected to comply.
+
+![what a delegated agent is told](assets/context.png)
 
 ## Autonomy
 
@@ -269,7 +288,7 @@ A four minute silent phase and a hung process look identical from the outside.
 |---|---|
 | `off` | silence until the phase ends |
 | `heartbeat` | one line a minute, parsed from Codex's own output stream. Free. |
-| `digest` | that, plus a short summary of what Codex found every few minutes. **Uses extra quota.** |
+| `digest` | that, plus the agent's own words condensed to two lines every few minutes, by a deliberately cheap Haiku call. **Uses extra quota**, and that is what makes it different from heartbeat rather than a second name for it. |
 | `window` | a second terminal running a live Codex session you can watch |
 
 The window is not a trick. `codex app-server` is documented JSON-RPC, the TUI
@@ -334,7 +353,21 @@ does.
   same property is built out of parts that are verified: run, check the gate,
   resume the same session until it passes. It works, and it is a loop rather
   than a first-party mechanism, which is worth knowing.
-- **Version 0.3.0.** The core loop works. Goals and the presets are new.
+- **Version 0.4.0.** The core loop works and has been run end to end. The presets are newer than the loop.
+
+## It has actually been run
+
+`/duet:duet-skill` was run end to end to build `duet-release`, the skill that
+cuts a release in this repo. Eight stages, real delegations, nothing staged. The
+run's own output is kept in [`docs/shakedown/`](docs/shakedown/): the spec, the
+research briefing with 11 VERIFIED, 1 CONTRADICTED and 1 UNVERIFIABLE claim each
+carrying a source, the debate's concerns, and the answer to them.
+
+It broke four things, which was the point. Two of them were shell bugs that made
+the goal path unreachable from zsh, one was an undocumented 4000-character cap
+on a goal objective, and one was a trigger test that could not tell a missing
+file from an absent phrase. All four are fixed. A tool nobody has run is a tool
+whose failures are still ahead of it.
 
 ## About the screenshots
 

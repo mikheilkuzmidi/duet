@@ -7,8 +7,16 @@
 # is always one yes away.
 
 # shellcheck source=duet-common.sh
-. "$(dirname "${BASH_SOURCE[0]}")/duet-common.sh"
-. "$(dirname "${BASH_SOURCE[0]}")/duet-setup.sh"
+# Locate siblings via DUET_ROOT, never via BASH_SOURCE alone.
+#
+# BASH_SOURCE IS EMPTY UNDER ZSH, which is the default shell on macOS and the
+# one Claude Code's Bash tool runs. `dirname ""` yields ".", so every sibling
+# source became ./duet-x.sh and failed. That made the whole goal path
+# unreachable from the very shell the skills tell the orchestrator to use, and
+# it survived every test that happened to run under `bash -c`.
+: "${DUET_ROOT:=$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")/.." && pwd)}"
+. "$DUET_ROOT/lib/duet-common.sh"
+. "$DUET_ROOT/lib/duet-setup.sh"
 
 # ---------- detection -------------------------------------------------------
 # Returns: ok | missing | logged-out
@@ -95,8 +103,11 @@ duet_preflight () {
 
   # Setup is not a gate, it is a missing answer. Say so once, in one line, and
   # let the caller decide whether to run it before continuing.
+  # Not a refusal and not an errand for the human. Return 2 means "ask the
+  # setup questions now, then carry on with whatever they actually wanted."
+  # Every skill acts on this; nobody has to invoke Duet twice.
   if ! duet_setup_done; then
-    duet_warn "this repo is not set up yet. Run /duet:duet-setup, or duet setup."
+    duet_warn "first run in this repo: setup questions come first, then I continue."
     return 2
   fi
   return 0

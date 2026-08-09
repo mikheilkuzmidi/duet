@@ -7,14 +7,46 @@ description: Run a plan that was already approved. Use when the user says "duet 
 
 Execute an approved plan. One phase at a time, each with exactly one owner.
 
+## Before anything
+
+Run `duet doctor`. **If it reports the repo is not set up, run the
+`duet-setup` skill now, to completion, then carry straight on with what was
+asked.** The human asked for something; setup is the questions Duet needs before
+it can do it, not a separate errand for them to run.
+
+## Running a stage
+
+Work that writes code goes through a goal, not a prompt. A prompt ends when the
+model stops talking; a goal ends when its gate command exits zero.
+
+```bash
+duet gate <preset> <n>                       # see the stage's gate command
+export DUET_STAGE_LABEL="<n>/<total> <Title>" DUET_GATE_CMD="<the gate>"
+duet goal codex  <objective-file> <cwd> <out.jsonl>
+duet goal claude <objective-file> <cwd> <out.json> "<gate>"
+duet delegate codex <brief> <cwd> <out.jsonl>     # a briefing, not a goal
+```
+
+**Call `duet`, never source the shell libraries.** `bin/duet` runs under bash
+whatever shell you are in; sourcing `lib/*.sh` from zsh, which is the default on
+macOS and what the Bash tool uses, does not work.
+
+The objective is written per `reference/goal-format.md`: one block of prose, no
+questions, the gate stated as a command. Read the exit code through
+the printed verdict: 75 is a usage limit and must not be retried, 76 wants a
+bigger token budget, 77 is blocked and worth reading, 78 hit a time or turn
+limit and the work so far stands.
+
+A briefing phase is not a goal. It is one `duet delegate codex` call.
+
 ## Per phase
 
 1. **Assemble the briefing.** Standing rules, then the outputs of the phases
    this one declares as inputs. Write it to `phases/<n>/in.md`.
-2. **Delegate** to the owner via `duet_delegate_codex` or
-   `duet_delegate_claude`. Both carry the safe invocation profile; do not
-   hand-roll the flags, because most of them exist to avoid a specific silent
-   failure.
+2. **Delegate** to the owner: `duet goal codex` or `duet goal claude` for work
+   that writes code, `duet delegate codex` for a briefing. All of them carry the
+   safe invocation profile; do not hand-roll the flags, because most of them
+   exist to avoid a specific silent failure, and do not source `lib/*.sh`.
 3. **Verify the served model** with `duet_require_strong`. Both platforms
    silently downgrade, so selecting a strong model is not the same as getting
    one.

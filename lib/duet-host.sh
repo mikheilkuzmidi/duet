@@ -18,7 +18,15 @@
 # `unknown` is a bug in the caller, not a missing detection case.
 
 # shellcheck source=duet-common.sh
-. "$(dirname "${BASH_SOURCE[0]}")/duet-common.sh"
+# Locate siblings via DUET_ROOT, never via BASH_SOURCE alone.
+#
+# BASH_SOURCE IS EMPTY UNDER ZSH, which is the default shell on macOS and the
+# one Claude Code's Bash tool runs. `dirname ""` yields ".", so every sibling
+# source became ./duet-x.sh and failed. That made the whole goal path
+# unreachable from the very shell the skills tell the orchestrator to use, and
+# it survived every test that happened to run under `bash -c`.
+: "${DUET_ROOT:=$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")/.." && pwd)}"
+. "$DUET_ROOT/lib/duet-common.sh"
 
 duet_host () {
   # 1. the handshake: set by Duet itself whenever it spawns a counterpart.

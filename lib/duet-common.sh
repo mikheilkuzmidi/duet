@@ -5,7 +5,7 @@
 # CLIs. A tool that lints other people's dependency hygiene should not arrive
 # with a pile of its own.
 
-DUET_VERSION="0.3.1"
+DUET_VERSION="0.4.0"
 DUET_ROOT="${DUET_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 DUET_MAX_AGENTS_CEILING=10          # total across both sides, never raisable
 DUET_MAX_AGENTS_DEFAULT=3           # legacy total, used when no side cap is set
@@ -116,7 +116,60 @@ duet_ref_set () {
     "$(duet_ref persona.md)" \
     "$(duet_ref standing-rules.md)" \
     "$(duet_ref output-format.md)" \
+    "$(duet_ref goal-format.md)" \
     "$(duet_ref definition-of-done.md)"
+}
+
+# ---------- the run context -------------------------------------------------
+# The reference files are the same for everyone. THIS is the part that differs
+# per repo, and until 0.4.0 none of it reached a delegated agent: autonomy,
+# voice and the coverage floor were written to .duet/config.json at setup and
+# then never told to anybody.
+#
+# That is a real defect, not a tidiness one. Under autonomy=full an agent must
+# never stop to ask, and an agent that was never told cannot comply. It would
+# ask, correctly by its own lights, and the run would stall waiting on a human
+# who was promised they would not be interrupted.
+#
+# Generated fresh per call so it cannot go stale, and kept to the settings that
+# actually change what an agent does.
+
+duet_context_block () {   # [stage-label] [resolved gate command]
+  local stage="${1:-}" gate="${2:-}" a v
+  a="$(duet_cfg autonomy product)"
+  v="$(duet_cfg voice plain)"
+
+  printf '# This run\n\n'
+  case "$a" in
+    full)    printf '  autonomy       full. Decide everything. NEVER stop to ask, not even once.\n'
+             printf '                 Record what you would have asked and proceed on your own\n'
+             printf '                 recommendation, marking the work provisional.\n' ;;
+    off)     printf '  autonomy       off. Stop at every decision and wait for the human.\n' ;;
+    *)       printf '  autonomy       product. Technical calls are yours alone: schema, API shape,\n'
+             printf '                 hosting, dependencies, file layout. Anything that changes what\n'
+             printf '                 a person SEES or READS stops and asks: copy, layout, flow,\n'
+             printf '                 naming, visual design.\n' ;;
+  esac
+  case "$v" in
+    technical) printf '  voice          technical. Direct, precise, assume they read code.\n' ;;
+    *)         printf '  voice          plain. No jargon in anything the human reads. Somebody who\n'
+               printf '                 has never opened a terminal must understand it.\n' ;;
+  esac
+  printf '  coverage floor %s%%\n' "$(duet_cfg done.coverageMin 80)"
+  printf '  safety         %s: %s\n' \
+    "$(duet_cfg safety.mode ask-now)" \
+    "$(duet_cfg safety.alwaysAsk 'push-to-main,production-data,delete-outside-tree')"
+  [ -n "$stage" ] && printf '  stage          %s\n' "$stage"
+  [ -n "$gate" ]  && printf '  exit gate      %s\n' "$gate"
+
+  local k first=1
+  for k in install dev build test lint typecheck deploy; do
+    local val; val="$(duet_cfg "commands.$k" "")"
+    [ -z "$val" ] && continue
+    if [ "$first" = "1" ]; then printf '\n  This project:\n'; first=0; fi
+    printf '    %-10s %s\n' "$k" "$val"
+  done
+  printf '\n'
 }
 
 # ---------- concurrency -----------------------------------------------------

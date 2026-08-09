@@ -8,6 +8,19 @@ description: Set Duet up for this repo. Asked once, answers stay on this machine
 Ten questions, once per repo. Answers live in `.duet/config.json`, excluded
 locally, so they are per-repo and per-device and never travel to anyone else.
 
+## When this runs by itself
+
+Every other Duet skill runs this one automatically when a repo has no
+`.duet/config.json`. In that case the human did not ask to be set up, they asked
+for something else, so:
+
+- Say in one line why this is happening: "First time here, so ten quick
+  questions before I start."
+- Ask them.
+- **Then carry straight on with what they originally asked for.** Do not report
+  that setup finished and stop. Finishing setup and waiting is the failure mode
+  this replaced.
+
 ## Before the first question
 
 Somebody running this for the first time has no idea what is about to happen or

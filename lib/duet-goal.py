@@ -161,7 +161,7 @@ def run(args):
 
     try:
         rid = srv.send("initialize", {
-            "clientInfo": {"name": "duet", "version": "0.3.0"},
+            "clientInfo": {"name": "duet", "version": "0.4.0"},
             "capabilities": {"experimentalApi": True},
         })
         r = wait(rid, timeout=30)

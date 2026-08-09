@@ -50,6 +50,16 @@
 # thing, so they cost no extra dependency. `pip install websockets` is required
 # for the visible window and for nothing else.
 #
+# THE OBJECTIVE IS CAPPED AT 4000 CHARACTERS. Verified the hard way, by sending
+# 9,237 and receiving:
+#   {"error":{"code":-32600,"message":"goal objective must be at most 4000 characters"}}
+# It is in no documentation this repo could find. That cap is WHY the briefing
+# belongs in developerInstructions on thread/start and only the objective goes
+# into thread/goal/set: a briefing is thousands of characters and an objective
+# is a paragraph. Duet refuses over-long objectives rather than truncating,
+# because the exit gate lives at the END of the block and a truncated objective
+# would silently lose the one line that decides when the work is done.
+#
 # OBSERVED, once, and therefore handled rather than relied upon: setting a goal
 # appeared to start a turn on its own. So this waits briefly for turn/started
 # before starting one itself, which is correct under both behaviours and double
@@ -57,9 +67,17 @@
 # ---------------------------------------------------------------------------
 
 # shellcheck source=duet-common.sh
-. "$(dirname "${BASH_SOURCE[0]}")/duet-common.sh"
-. "$(dirname "${BASH_SOURCE[0]}")/duet-models.sh"
-. "$(dirname "${BASH_SOURCE[0]}")/duet-progress.sh"
+# Locate siblings via DUET_ROOT, never via BASH_SOURCE alone.
+#
+# BASH_SOURCE IS EMPTY UNDER ZSH, which is the default shell on macOS and the
+# one Claude Code's Bash tool runs. `dirname ""` yields ".", so every sibling
+# source became ./duet-x.sh and failed. That made the whole goal path
+# unreachable from the very shell the skills tell the orchestrator to use, and
+# it survived every test that happened to run under `bash -c`.
+: "${DUET_ROOT:=$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")/.." && pwd)}"
+. "$DUET_ROOT/lib/duet-common.sh"
+. "$DUET_ROOT/lib/duet-models.sh"
+. "$DUET_ROOT/lib/duet-progress.sh"
 
 # Exit codes, so a caller can tell "not finished" apart from "cannot finish".
 DUET_GOAL_OK=0
@@ -73,6 +91,8 @@ duet_goal_supported () {
   codex features list 2>/dev/null | awk '$1=="goals"{print $NF}' | grep -q true
 }
 
+DUET_GOAL_OBJECTIVE_MAX=4000
+
 # duet_goal_run <objective-file> <cwd> <out.jsonl> [developer-instructions-file]
 #
 # Streams every notification to out.jsonl in the same shape duet-progress.sh
@@ -82,6 +102,14 @@ duet_goal_run () {
   local sandbox model effort budget maxmin maxturns grace
 
   [ -f "$obj" ] || duet_die "objective file not found: $obj"
+
+  local objlen; objlen=$(wc -c < "$obj" | tr -d ' ')
+  if [ "$objlen" -gt "$DUET_GOAL_OBJECTIVE_MAX" ]; then
+    duet_err "objective is $objlen characters; the goal API caps it at $DUET_GOAL_OBJECTIVE_MAX."
+    duet_err "Put the briefing in the developer-instructions argument, not the objective."
+    duet_err "An objective is a paragraph and a gate. See reference/goal-format.md."
+    return $DUET_GOAL_ERROR
+  fi
 
   if duet_fastmode 2>/dev/null; then sandbox="danger-full-access"; else sandbox="workspace-write"; fi
   model="$(duet_codex_model)"

@@ -7,14 +7,25 @@ description: Have Codex check what is currently true about a dependency, API or 
 
 One phase of the Duet pipeline on its own: **Codex establishes the facts.**
 
+## Before anything
+
+Run `duet doctor`. **If it reports the repo is not set up, run the
+`duet-setup` skill now, to completion, then carry straight on with what was
+asked.** The human asked for something; setup is the questions Duet needs before
+it can do it, not a separate errand for them to run.
+
 Use it when you need to know what is actually true right now, and your own
 recollection is not evidence.
 
 ## Run it
 
+```bash
+duet delegate codex <briefing> <cwd> <out.jsonl>
 ```
-lib/duet-delegate.sh   # duet_delegate_codex <briefing> <cwd> <out.jsonl>
-```
+
+Call `duet`, never source `lib/*.sh`. `bin/duet` runs under bash whatever shell
+you are in; the libraries do not survive being sourced from zsh, which is the
+default on macOS.
 
 The briefing goes in as a **file**, never as an argument. Codex rejects prompts
 over 1,048,576 characters, and the npm shim dies near 1 MB with a Node

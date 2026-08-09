@@ -13,6 +13,12 @@ because a goal with a vague objective is a prompt with extra machinery.
 
 ## The shape
 
+**Under 4000 characters.** Not a style preference: `thread/goal/set` rejects
+anything longer, and Duet refuses rather than truncating, because the gate lives
+at the end of the block and a truncated objective loses it silently. Briefings,
+research findings and file listings do not go in the objective; they go in the
+developer instructions, which have no such cap.
+
 **One block of prose. No headings, no checklists, no sections.** A structured
 document invites the agent to treat each section as separately satisfiable and
 report on progress through them. A block invites it to do the work.

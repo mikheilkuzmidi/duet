@@ -8,6 +8,13 @@ description: Have both AIs review existing work and argue about it once. Use whe
 The review exchange, runnable on its own. It works on any branch, including work
 neither agent wrote, which is most of its value outside a full pipeline.
 
+## Before anything
+
+Run `duet doctor`. **If it reports the repo is not set up, run the
+`duet-setup` skill now, to completion, then carry straight on with what was
+asked.** The human asked for something; setup is the questions Duet needs before
+it can do it, not a separate errand for them to run.
+
 ## The protocol
 
 **Batched, never one concern at a time.** A running argument is unreadable and

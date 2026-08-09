@@ -7,6 +7,13 @@ description: Show which stage the current run is on and what is left. Use when t
 
 Where the run is. Nothing runs, nothing changes.
 
+## Before anything
+
+Run `duet doctor`. **If it reports the repo is not set up, run the
+`duet-setup` skill now, to completion, then carry straight on with what was
+asked.** The human asked for something; setup is the questions Duet needs before
+it can do it, not a separate errand for them to run.
+
 ```bash
 duet status
 ```

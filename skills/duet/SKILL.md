@@ -9,9 +9,13 @@ You orchestrate. Codex is your counterpart, not your subordinate: it is better
 than you at one specific thing, and this pipeline exists to stop you doing that
 thing badly.
 
-Run `lib/duet-preflight.sh` first. If it refuses, offer to install what is
-missing. If it reports the repo is not set up, run `duet-setup`. Do not proceed
-on one agent.
+Run `duet doctor` first. If it refuses, offer to install what is
+missing. Do not proceed on one agent.
+
+**If it reports the repo is not set up, run the `duet-setup` skill right now,
+to completion, then carry straight on with what was asked.** Not a suggestion
+for later and not a second invocation for the human: they asked for something,
+and this is the questions Duet needs before it can do it.
 
 ## The premise, so you can reason from it rather than obey
 
@@ -79,6 +83,40 @@ everything underneath: backend, data, integrations, environment, tests.
 Codex raises a wording or interface concern by filing it with the exact string
 and the reason. It does not edit it. Claude decides, and an intentional choice
 stands.
+
+### Delegate work as a goal, briefs as a call
+
+This is the difference between work that comes back finished and work that comes
+back at eighty percent.
+
+| The phase | How to run it |
+|---|---|
+| produces a briefing, and nothing else | `duet delegate codex <brief> <cwd> <out>` |
+| writes code, or must satisfy a command | `duet goal codex` / `duet goal claude` |
+
+A goal ends when its gate command exits zero. A prompt ends when the model stops
+talking, which is a different thing and is why half-built results happen.
+
+Before delegating a stage:
+
+1. Resolve its gate: `duet gate <preset> <n>`. A resolver
+   that returns non-zero means a command is not configured; record that as
+   outstanding rather than treating the stage as passed.
+2. Export `DUET_STAGE_LABEL` and `DUET_GATE_CMD` so the run context injected
+   into the call tells the agent where it is and what it is measured by.
+3. Write the objective per `reference/goal-format.md`: one block of prose, no
+   headings, no questions, constraints folded in, and the gate stated as the
+   command.
+4. Call the runner. `duet goal claude` takes the gate as its fourth argument
+   and loops until it passes.
+
+`duet goal` prints what the exit code means, because these are not all
+failures:
+
+- **75** usage limited. **Stop. Do not retry.** Resume after the reset.
+- **76** token budget spent. Raise `goal.tokenBudget` and resume.
+- **77** blocked. It needs something it does not have; read what it said.
+- **78** hit `goal.maxMinutes` or `goal.maxTurns`. The work so far stands.
 
 ### Approval
 

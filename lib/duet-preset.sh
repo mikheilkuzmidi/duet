@@ -15,7 +15,15 @@
 # The stages are hardcoded. What happens inside one is not.
 
 # shellcheck source=duet-common.sh
-. "$(dirname "${BASH_SOURCE[0]}")/duet-common.sh"
+# Locate siblings via DUET_ROOT, never via BASH_SOURCE alone.
+#
+# BASH_SOURCE IS EMPTY UNDER ZSH, which is the default shell on macOS and the
+# one Claude Code's Bash tool runs. `dirname ""` yields ".", so every sibling
+# source became ./duet-x.sh and failed. That made the whole goal path
+# unreachable from the very shell the skills tell the orchestrator to use, and
+# it survived every test that happened to run under `bash -c`.
+: "${DUET_ROOT:=$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")/.." && pwd)}"
+. "$DUET_ROOT/lib/duet-common.sh"
 
 duet_preset_file () { printf '%s/reference/presets/%s.json' "$DUET_ROOT" "$1"; }
 
@@ -94,28 +102,47 @@ duet_gate_resolve () {   # <gate_cmd> [out-path] ; echoes the resolved command
   local cmd="$1" out="${2:-}" missing=0 key val
   [ -z "$cmd" ] && return 0
 
-  while [[ "$cmd" =~ \{\{cmd\.([a-zA-Z]+)\}\} ]]; do
-    key="${BASH_REMATCH[1]}"
-    val="$(duet_cfg "commands.$key" "")"
-    if [ -z "$val" ]; then
-      val="{ echo 'gate needs commands.$key, which is not configured'; false; }"
-      missing=1
-    fi
-    cmd="${cmd//\{\{cmd.$key\}\}/$val}"
+  # Substitute by iterating KNOWN KEYS rather than by regex.
+  #
+  # The regex version used ${BASH_REMATCH[1]}, which under zsh holds the WHOLE
+  # match rather than the first group. The placeholder was therefore never
+  # consumed and the while loop span forever, in the exact shell Claude Code's
+  # Bash tool runs. A hang is the worst failure shape available: no error, no
+  # output, and the human kills the run believing the model is thinking.
+  for key in install dev build test lint typecheck deploy start migrate; do
+    case "$cmd" in
+      *"{{cmd.$key}}"*)
+        val="$(duet_cfg "commands.$key" "")"
+        if [ -z "$val" ]; then
+          val="{ echo 'gate needs commands.$key, which is not configured'; false; }"
+          missing=1
+        fi
+        cmd="${cmd//\{\{cmd.$key\}\}/$val}"
+        ;;
+    esac
   done
+
+  # Anything still unsubstituted is a key nobody knows about. Say so rather than
+  # handing a literal {{cmd.whatever}} to the shell.
+  case "$cmd" in
+    *"{{cmd."*)
+      cmd="{ echo 'gate references an unknown command placeholder'; false; }"
+      missing=1 ;;
+  esac
 
   # Same trap, different placeholder, and this one is worse: an empty {{out}}
   # turns `test -s {{out}}` into `test -s`, which is a one-argument test of a
   # non-empty string and therefore TRUE. The gate would pass because there was
   # nothing to check. Substitute something that fails instead.
-  if [[ "$cmd" == *'{{out}}'* ]]; then
-    if [ -n "$out" ]; then
-      cmd="${cmd//\{\{out\}\}/$out}"
-    else
-      cmd="{ echo 'gate needs the phase output path, which was not supplied'; false; }"
-      missing=1
-    fi
-  fi
+  case "$cmd" in
+    *"{{out}}"*)
+      if [ -n "$out" ]; then
+        cmd="${cmd//\{\{out\}\}/$out}"
+      else
+        cmd="{ echo 'gate needs the phase output path, which was not supplied'; false; }"
+        missing=1
+      fi ;;
+  esac
 
   printf '%s' "$cmd"
   return $missing
