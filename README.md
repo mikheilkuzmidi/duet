@@ -275,7 +275,8 @@ A four minute silent phase and a hung process look identical from the outside.
 The window is not a trick. `codex app-server` is documented JSON-RPC, the TUI
 ships a first-party `--remote` flag, and an external client starting a turn on a
 thread it does not own is supported behaviour. It was verified end to end before
-being built: see the `prototype/oq1-codex-remote-attach` branch.
+being built: the harness and its output are in
+[`prototypes/oq1-codex-remote-attach/`](prototypes/oq1-codex-remote-attach/).
 
 ```bash
 pip install websockets    # the visible window only. Goals need nothing.
