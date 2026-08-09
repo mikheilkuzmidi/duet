@@ -356,10 +356,11 @@ the ones that cost the most time.
 
 ## Credit
 
-The decision-mapping approach that produced this repo was inspired by the
-`wayfinder` skill from [mattpocock/skills](https://github.com/mattpocock/skills)
-(MIT). Duet's mechanics are its own, but the idea of charting an effort as
-decision tickets with a fog frontier came from there, and it deserves saying.
+Duet was planned with the `wayfinder` skill from
+[mattpocock/skills](https://github.com/mattpocock/skills), which is why this
+repo's issue tracker is a wayfinder map: a destination, a fog frontier, and
+`wayfinder:*` labels on every ticket. None of Duet's own code or skills derive
+from it. The debt is to the process, not the product.
 
 ## Licence
 

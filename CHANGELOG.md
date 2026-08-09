@@ -1,5 +1,50 @@
 # Changelog
 
+## 0.3.1
+
+Models pinned to what was asked for, and three bugs that pinning exposed.
+
+- **Codex runs `gpt-5.6-terra` at `xhigh`.** The slug is verified against the
+  live catalog on every call: `models.codex.prefer` is used only if the catalog
+  still lists it, and a preference that has disappeared degrades to discovery
+  and says so, rather than passing a dead model name to the CLI.
+- **Claude runs `opus` at `xhigh`.** The previous default, `best`, does not mean
+  Opus. Verified by running it: `best` resolves to `claude-fable-5`, while
+  `opus` resolves to `claude-opus-5`. Duet had been selecting a different model
+  from the one it described.
+- **`ultracode` is not a model and not a level above `xhigh`.** It resolves to
+  `xhigh` and adds dynamic-workflow orchestration to an interactive session,
+  which a delegated `-p` call has nothing to do with. `max` is the real level
+  above `xhigh`; set `models.claude.effort=max` if you want it.
+
+### Fixed
+
+- **Duet never passed `--effort`.** It computed a level, printed it, and invoked
+  Claude without it. Every delegated call ran at the account default while the
+  transcript claimed otherwise.
+- **`CLAUDE_CODE_EFFORT_LEVEL` silently overrides `--effort`.** It is now
+  cleared for delegated children. Verified: with `CLAUDE_CODE_EFFORT_LEVEL=low`
+  set in the parent environment, the delegated agent reports `xhigh`.
+- **The served-model check failed almost every healthy phase.** Claude Code runs
+  housekeeping on Haiku alongside the working model, so `modelUsage` legitimately
+  holds two entries, and any second entry was being reported as a mid-run model
+  switch and refused. Auxiliary tiers are now ignored; two substantive models is
+  still a genuine switch and still refused.
+
+### Changed
+
+- The Credit section says what is actually true. Nothing from
+  `mattpocock/skills` ships in Duet: no code, no prose, no file. An audit found
+  zero six-word runs shared with upstream anywhere in the repo or its history,
+  and the MIT notice condition never attaches because no portion of that
+  software is distributed here. The credit now records that Duet was *planned*
+  with the wayfinder skill, which is why the issue tracker carries `wayfinder:*`
+  labels, and drops both the retired "decision-mapping" name and the "(MIT)"
+  parenthetical that implied a licence relationship.
+- One branch. The OQ-1 prototype harness moved onto `main` under
+  `prototypes/oq1-codex-remote-attach/`, so the README's evidence citation
+  resolves to a directory rather than a deleted branch.
+
 ## 0.3.0
 
 Goals, onboarding, and autonomy that is a setting rather than a promise.

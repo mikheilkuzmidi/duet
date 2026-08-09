@@ -15,10 +15,38 @@
 
 # ---------- Claude ----------------------------------------------------------
 # Tier aliases are documented to track the newest model over time, which is the
-# whole no-hardcoding requirement solved in one flag.
+# whole no-hardcoding requirement solved in one flag. But WHICH alias matters,
+# and the obvious one was wrong.
+#
+# VERIFIED on claude 2.1.226, by running each alias and reading modelUsage back:
+#
+#   --model best      -> claude-fable-5      NOT Opus
+#   --model opus      -> claude-opus-5
+#   --model opus[1m]  -> claude-opus-5[1m]   1M context, same canonical model
+#
+# The docs explain it: `best` means "Fable where your organization has access to
+# it, otherwise the latest Opus". So Duet defaulting to `best` was quietly
+# selecting a different model from the one its own README described. `opus` is
+# the alias that means Opus and still tracks the newest one.
+#
+# EFFORT. `--effort <level>` takes low, medium, high, xhigh, max. Opus 5
+# supports all five. Two things worth knowing:
+#
+#   `ultracode` is NOT a model and NOT a level above xhigh. It resolves TO
+#   xhigh, and adds standing dynamic-workflow orchestration to an interactive
+#   session. For a delegated -p call there is nothing to orchestrate, so xhigh
+#   is exactly what ultracode would have given you.
+#
+#   `max` is a real level ABOVE xhigh. Duet does not default to it for the same
+#   reason it does not default Codex to `ultra`: cost, and a delegated agent
+#   that reasons for minutes at every phase boundary. Set it if you want it.
+#
+# THE TRAP: CLAUDE_CODE_EFFORT_LEVEL in the environment SILENTLY OVERRIDES the
+# --effort flag. A tool that shells out must unset it or it will report one
+# effort and get another. duet_delegate_claude does exactly that.
 
-duet_claude_model  () { duet_cfg models.claude.model  "best"; }
-duet_claude_effort () { duet_cfg models.claude.effort "high"; }
+duet_claude_model  () { duet_cfg models.claude.model  "opus"; }
+duet_claude_effort () { duet_cfg models.claude.effort "xhigh"; }
 
 # ---------- Codex -----------------------------------------------------------
 # No aliases exist, so discover at runtime. Rank effort by ARRAY POSITION in the
@@ -41,22 +69,48 @@ duet_codex_catalog () { codex debug models 2>/dev/null || codex debug models --b
 # NOTE: the catalog goes in as a FILE, not a pipe. `python3 - <<'PY'` makes the
 # heredoc the program, so anything piped in is swallowed as source and stdin is
 # already at EOF by the time the script runs.
+# Selection order, which exists to honour a preference without hardcoding into a
+# corner:
+#
+#   1. models.codex.model      an explicit override. Used as given, no checking.
+#   2. models.codex.prefer     a preferred slug, USED ONLY IF THE CATALOG STILL
+#                              LISTS IT. Default gpt-5.6-terra.
+#   3. discovery               highest priority visible model, as before.
+#
+# Step 2 is the point. Naming a model in config is how a human expresses a
+# choice; silently keeping that name after it disappears from the catalog is how
+# a tool breaks in a way nobody can read. So the preference is checked against
+# the live catalog every time, and a preference that no longer exists degrades
+# to discovery and says so.
+#
+# gpt-5.6-terra VERIFIED present: priority 2, visibility "list",
+# supported_in_api true, reasoning levels low/medium/high/xhigh/max/ultra.
 duet_codex_model () {
-  local override tmp out; override="$(duet_cfg models.codex.model "")"
+  local override prefer tmp out; override="$(duet_cfg models.codex.model "")"
   [ -n "$override" ] && { printf '%s' "$override"; return; }
+  prefer="$(duet_cfg models.codex.prefer "gpt-5.6-terra")"
   tmp="$(mktemp)"; duet_codex_catalog > "$tmp"
-  out="$(python3 - "$tmp" <<'PY'
+  out="$(python3 - "$tmp" "$prefer" <<'PY'
 import json,sys
 try: d=json.load(open(sys.argv[1]))
 except Exception: sys.exit(0)
+prefer = sys.argv[2] if len(sys.argv) > 2 else ""
 models = d.get("models") if isinstance(d,dict) else d
 if not isinstance(models,list) or not models: sys.exit(0)
+if prefer and any(m.get("slug") == prefer for m in models):
+    print(prefer); sys.exit(0)
 vis=[m for m in models if m.get("visibility")=="list"] or models
 vis.sort(key=lambda m: m.get("priority", 10**9))
-print(vis[0].get("slug",""))
+print("FELLBACK", vis[0].get("slug",""))
 PY
 )"
-  rm -f "$tmp"; printf '%s' "$out"
+  rm -f "$tmp"
+  case "$out" in
+    "FELLBACK "*)
+      [ -n "$prefer" ] && duet_warn "codex model '$prefer' is not in the catalog; using ${out#FELLBACK }"
+      printf '%s' "${out#FELLBACK }" ;;
+    *) printf '%s' "$out" ;;
+  esac
 }
 
 # Effort is ranked by POSITION in the model's own advertised list, never by a
@@ -94,14 +148,37 @@ PY
 # exec --json at all; it is only recoverable from the rollout's
 # turn_context.model, which is why Duet must never pass --ephemeral.
 
+# A SECOND MODEL IN modelUsage IS NORMAL, and the naive check for it was a false
+# positive that would have failed almost every phase. Claude Code runs small
+# housekeeping tasks (conversation titles and similar) on Haiku alongside the
+# model doing the work, so a healthy run reports two models. Verified: a single
+# delegated call returned
+#   modelUsage: ["claude-haiku-4-5-20251001", "claude-opus-5"]
+# which the old test called "model switched mid-run" and refused.
+#
+# So: ignore the auxiliary tier, and report the model that did the most work. A
+# genuine switch is two SUBSTANTIVE models, which is still worth refusing.
 duet_verify_claude_model () {   # <path to claude --output-format json output>
   python3 - "$1" <<'PY'
 import json,sys
+AUX = ("haiku", "mini", "nano")            # housekeeping tiers, never the worker
 try: d=json.load(open(sys.argv[1]))
 except Exception: print("unknown"); sys.exit(0)
-usage=d.get("modelUsage") or {}
-if len(usage)>1: print("SWITCHED:"+",".join(usage.keys())); sys.exit(0)
-print(next(iter(usage), d.get("model","unknown")))
+usage = d.get("modelUsage") or {}
+if not usage:
+    print(d.get("model","unknown")); sys.exit(0)
+
+def tokens(v):
+    if not isinstance(v, dict): return 0
+    return sum(x for x in v.values() if isinstance(x, int))
+
+primary = {k: v for k, v in usage.items() if not any(a in k.lower() for a in AUX)}
+if len(primary) > 1:
+    print("SWITCHED:" + ",".join(primary)); sys.exit(0)
+if primary:
+    print(next(iter(primary))); sys.exit(0)
+# Only auxiliary models ran, which means the work itself was served small.
+print(max(usage, key=lambda k: tokens(usage[k])))
 PY
 }
 

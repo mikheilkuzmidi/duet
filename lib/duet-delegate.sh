@@ -138,8 +138,16 @@ duet_delegate_claude () {
 
   duet_say "  claude · $(duet_claude_model) · effort $(duet_claude_effort) · $mode"
 
-  ( cd "$cwd" && DUET_HOST=claude claude -p \
+  # --effort is passed, not merely reported. Duet printed an effort it never
+  # applied until 0.3.1, which is the exact shape of the thing standing rule 7
+  # exists to forbid.
+  #
+  # CLAUDE_CODE_EFFORT_LEVEL in the environment silently OVERRIDES --effort, so
+  # it is cleared for the child. Inheriting it would mean the line above is a
+  # lie whenever the human has that variable set.
+  ( cd "$cwd" && DUET_HOST=claude CLAUDE_CODE_EFFORT_LEVEL= claude -p \
       --model "$(duet_claude_model)" \
+      --effort "$(duet_claude_effort)" \
       --permission-mode "$mode" \
       --output-format json \
       --session-id "$sid" \
@@ -221,15 +229,17 @@ duet_work_claude () {
   while [ "$turns" -lt "$max" ]; do
     turns=$((turns + 1))
     if [ "$turns" -eq 1 ]; then
-      ( cd "$cwd" && DUET_HOST=claude claude -p \
-          --model "$(duet_claude_model)" --permission-mode "$mode" \
+      ( cd "$cwd" && DUET_HOST=claude CLAUDE_CODE_EFFORT_LEVEL= claude -p \
+          --model "$(duet_claude_model)" --effort "$(duet_claude_effort)" \
+          --permission-mode "$mode" \
           --output-format json --session-id "$sid" \
           --append-system-prompt-file "$sysprompt" \
           < "$obj" > "$out" 2>>"${out}.err" )
     else
       printf 'Continue toward the objective. Do not summarise progress and do not ask questions. Keep working until this passes: %s\n' "$gate" \
-        | ( cd "$cwd" && DUET_HOST=claude claude -p \
-              --model "$(duet_claude_model)" --permission-mode "$mode" \
+        | ( cd "$cwd" && DUET_HOST=claude CLAUDE_CODE_EFFORT_LEVEL= claude -p \
+              --model "$(duet_claude_model)" --effort "$(duet_claude_effort)" \
+              --permission-mode "$mode" \
               --output-format json --resume "$sid" \
               --append-system-prompt-file "$sysprompt" \
               > "$out" 2>>"${out}.err" )

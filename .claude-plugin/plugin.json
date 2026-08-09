@@ -1,6 +1,6 @@
 {
   "name": "duet",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Claude and Codex as one build pipeline. Codex establishes the facts (current docs, real API surfaces, dependency versions, supply-chain safety, tests); Claude owns judgement (grilling, spec, architecture, logic, design). Stops the failure where an AI confidently writes an API call that was removed two versions ago.",
   "author": {
     "name": "Mikheil Kuzmidi"
