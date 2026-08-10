@@ -82,9 +82,13 @@ duet_ledger_report () {   # <run-dir>
 import json,sys
 try: d=json.load(open(sys.argv[1]))
 except Exception: sys.exit(0)
-print(f"  spend so far: ${d.get('totalUsd',0):.4f} across {len(d.get('phases',[]))} phases")
+# Say whose money this is. The dollar figure is CLAUDE ONLY, because Codex
+# exposes no price to the CLI, and presenting the two together as one total
+# would be a number that looks complete and is not.
+n=len(d.get('phases',[]))
+print(f"  claude spend: ${d.get('totalUsd',0):.4f} across {n} phases")
 ct=sum(p.get("tokens") or 0 for p in d.get("phases",[]) if p.get("agent")=="codex")
-if ct: print(f"  codex tokens: {ct} (no dollar figure is exposed to the CLI)")
+if ct: print(f"  codex usage : {ct} tokens. No dollar figure exists for it; see `duet goal status` for the rate limit, which is the real ceiling on a subscription.")
 PY
 }
 
@@ -93,7 +97,7 @@ PY
 # directory is left resumable (issue #26).
 duet_ledger_guard () {   # <run-dir> ; returns 1 when the run should stop
   local dir="$1" soft hard total
-  soft="$(duet_cfg budget.warnUsd 5)"
+  soft="$(duet_cfg budget.warnUsd 0)"      # 0 means no warning; not asked at setup
   hard="$(duet_cfg budget.stopUsd 0)"      # 0 means no hard stop
   total="$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1])).get("totalUsd",0))' "$dir/ledger.json" 2>/dev/null || echo 0)"
   awk -v t="$total" -v s="$soft" 'BEGIN{exit !(s>0 && t>=s)}' && \

@@ -1,5 +1,36 @@
 # Changelog
 
+## 0.4.1
+
+Duet stops asking for a budget it cannot measure.
+
+Setup used to ask "warn me at what spend, stop at what spend", meaning Duet's
+own token spend. That question is gone, for two reasons.
+
+**It could not be answered honestly.** Codex exposes no dollar figure to the CLI
+at all, so a $25 ceiling only ever counted Claude's half and then reported the
+total as though it were the whole thing. Half a meter presented as a full one is
+the failure this repo exists to refuse, and it was sitting in the setup
+interview.
+
+**It asked about the wrong money.** Nobody budgets an agent by the dollar; they
+budget the project. That question already exists in the app preset, where it is
+about hosting and is answerable, and it now reads "what is the most you want to
+spend per month to RUN this, once it is live" rather than a vague "how much can
+this cost".
+
+What replaces it is the number that actually binds on a subscription.
+`duet doctor` now reports the real Codex rate limit from
+`account/rateLimits/read`: percent of the window used, window length, when it
+resets, and the plan. Measured, not guessed.
+
+- The interview is ten questions and none of them are about Duet's own cost.
+- `duet_ledger_report` labels its figure **claude spend**, and says plainly that
+  no dollar figure exists for Codex.
+- `budget.warnUsd` and `budget.stopUsd` still work when set by hand, for anyone
+  on an API key where dollars are the real unit. They default to off.
+- `duet setup --max` no longer sets a spend warning it cannot honour.
+
 ## 0.4.0
 
 Closing the gap between what Duet said and what Duet did. Auditing 0.3.1 before

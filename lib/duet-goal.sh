@@ -153,6 +153,31 @@ duet_rate_limits () {
   python3 "$DUET_ROOT/lib/duet-goal.py" --rate-limits-only 2>/dev/null
 }
 
+# The ceiling that actually binds on a subscription. Duet used to ask the human
+# for a dollar limit it could only half measure; this is the real number and it
+# comes from the platform rather than from a guess.
+duet_rate_report () {
+  local j; j="$(duet_rate_limits)"
+  [ -z "$j" ] && { duet_say "  rate limits: unavailable"; return 0; }
+  printf '%s' "$j" | python3 -c "
+import json,sys,time
+try: d=json.load(sys.stdin)
+except Exception: print('  rate limits: unreadable'); raise SystemExit
+r=(d.get('rateLimits') or {})
+p=(r.get('primary') or {})
+used=p.get('usedPercent'); reset=p.get('resetsAt'); win=p.get('windowDurationMins')
+if used is None: print('  rate limits: none reported'); raise SystemExit
+bits=[f'{used}% of the codex window used']
+if win: bits.append(f'{int(win)//1440}d window' if win>=1440 else f'{int(win)}m window')
+if reset:
+    left=int(reset)-int(time.time())
+    if left>0: bits.append(f'resets in {left//86400}d {left%86400//3600}h' if left>=86400 else f'resets in {left//3600}h')
+plan=r.get('planType')
+if plan: bits.append(plan)
+print('  ' + ' · '.join(bits))
+"
+}
+
 duet_goal_explain () {   # <exit code> ; one line, for the human
   case "${1:-}" in
     "$DUET_GOAL_OK")             printf 'complete' ;;

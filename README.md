@@ -331,11 +331,15 @@ does.
   work is what keeps Claude honest, and it is not free. Briefs are cached within
   a run, and pure-logic phases skip them, but Duet is slower than one agent
   guessing confidently.
-- **Spend visibility is partial, and less partial than it was.** Duet measures
-  its own cost exactly, and `account/rateLimits/read` on the Codex app-server
-  gives real remaining-quota figures: used percent, window length, reset time.
-  Claude exposes no equivalent, so half the picture is still guesswork and the
-  agent caps remain a blunt instrument for that half.
+- **Duet does not ask for a dollar budget, on purpose.** Codex exposes no price
+  to the CLI, so any ceiling would count Claude's half and present it as the
+  whole. What it reports instead is measured: `account/rateLimits/read` gives
+  the real Codex quota, being percent of the window used, window length and
+  reset time, and the ledger labels its dollar figure "claude spend" rather than
+  implying it covers both. Claude exposes no quota equivalent, so the agent caps
+  remain a blunt instrument for that half. The one money question Duet asks is
+  the project's monthly running cost, in the app preset, where it is about
+  hosting and is answerable.
 - **Onboarding is asymmetric.** Claude Code gets `/duet:*`. Codex does not
   support custom slash commands.
 - **The heartbeat parser is defensive, not verified.** Codex's `--json` stream

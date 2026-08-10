@@ -64,7 +64,6 @@ keeps twelve keys down to ten questions.
 | How many agents at once, Claude and Codex? | `agents.*.max` | 2 and 2 |
 | Want to see progress while I work? | `progress.mode` | `heartbeat` |
 | Skip the "can I edit this file" prompts? | `permissions.bypass` | **true** |
-| Warn me at what spend, stop at what spend? | `budget.*` | 5 and 0 |
 | Coverage floor before anything counts as done? | `done.coverageMin` | 80 |
 
 Explain each in the answer text, never in a paragraph after it:
@@ -86,6 +85,13 @@ Explain each in the answer text, never in a paragraph after it:
 - **progress** `heartbeat` is one line a minute and costs nothing. `digest`
   adds a summary of what Codex found every few minutes, **and that one uses
   extra quota**. `window` opens a second terminal running Codex live.
+- **no money question here.** Duet does not ask what it may spend on itself,
+  because Codex exposes no dollar figure to the CLI and a ceiling that counts
+  only Claude's half would be a number that looks complete and is not. On a
+  subscription the real ceiling is the rate limit, and `duet goal status` reads
+  it properly. The one money question Duet does ask is the project's monthly
+  running cost, and it belongs in the app preset where it is about hosting.
+  `budget.warnUsd` and `budget.stopUsd` still work if set by hand.
 - **fast mode is recommended on**, and say why in both directions: without it,
   every file edit stops and asks, which makes a long run unusable. With it, the
   plan approval gate also stops gating, and Claude's auto-mode classifier may
@@ -122,7 +128,7 @@ duet setup voice=plain grill.depth=normal autonomy=product \
   safety.alwaysAsk=push-to-main,production-data,delete-outside-tree \
   safety.mode=ask-now git.mode=branch \
   agents.claude.max=2 agents.codex.max=2 progress.mode=heartbeat \
-  permissions.bypass=true budget.warnUsd=5 budget.stopUsd=0 done.coverageMin=80
+  permissions.bypass=true done.coverageMin=80
 ```
 
 Anything not passed takes its default. Values are validated, `.duet/` and

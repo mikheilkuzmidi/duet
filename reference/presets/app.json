@@ -25,12 +25,12 @@
     },
     {
       "id": "budget",
-      "title": "Budget and scale",
-      "plain": "Money per month, how many people, by when.",
+      "title": "Running cost and scale",
+      "plain": "Max per month to run it, how many people, by when.",
       "owner": "claude",
       "gate": "user",
-      "ask": "Roughly how much can this cost to run per month, how many people will use it, and is there a deadline?",
-      "done": "spec.md holds a monthly ceiling, a user count, a date or 'none', the existing accounts to reuse, and whether personal data is involved.",
+      "ask": "What is the most you want to spend per month to RUN this, once it is live? That is hosting and services, not what it costs to build. Also: how many people will use it, and is there a deadline?",
+      "done": "spec.md holds a maximum monthly running cost, a user count, a date or 'none', the existing accounts to reuse, and whether personal data is involved.",
       "also_ask": [
         {
           "q": "Anything you already pay for that I should use? A hosting account, a database, a domain.",
@@ -40,7 +40,8 @@
           "q": "Will this hold anything about real people? Names, emails, messages, payments, health, location.",
           "why": "Moves auth, hosting region, logging and backups. Asked now because retrofitting it after the architecture is chosen is the expensive way to learn it."
         }
-      ]
+      ],
+      "note": "This is the project's monthly running cost, and it is the only money question Duet asks. It does not ask about its own token spend, because Codex exposes no dollar figure and half a total presented as a whole one is worse than no total."
     },
     {
       "id": "grill",

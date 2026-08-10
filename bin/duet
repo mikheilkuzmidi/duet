@@ -38,6 +38,11 @@ case "$cmd" in
     duet_say "  codex : ${m:-<catalog unavailable>} at effort $(duet_codex_effort "$m")"
     duet_step "GitHub"
     duet_say "  $(duet_gh_capabilities 2>/dev/null || echo 'gh not installed')"
+    duet_step "Limits"
+    duet_say "  agents: claude $(duet_max_agents_for claude), codex $(duet_max_agents_for codex)"
+    duet_rate_report
+    duet_say "  Duet asks for no dollar budget. Codex exposes no price to the CLI,"
+    duet_say "  so a ceiling counting only Claude would look complete and not be."
     duet_step "Progress"
     duet_say "  mode: $(duet_progress_mode)"
     if duet_window_enabled; then

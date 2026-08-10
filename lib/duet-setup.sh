@@ -37,6 +37,25 @@ DUET_SETUP_VERSION=1
 
 # ---------- schema ----------------------------------------------------------
 # key|default|validator|one-line plain-English question
+#
+# NO DOLLAR BUDGET QUESTION, deliberately. It used to ask "warn at what spend,
+# stop at what spend", meaning Duet's OWN token spend, and it was removed in
+# 0.4.1 for two reasons.
+#
+# It could not be answered honestly. Codex exposes no dollar figure to the CLI
+# at all, so a $25 ceiling only ever counted Claude's half and then presented
+# the total as if it were the whole. Half a meter reported as a whole one is the
+# thing this repo exists to refuse.
+#
+# It also asked about the wrong money. Nobody budgets their agent by the dollar;
+# they budget the PROJECT, and that question belongs in the app preset's budget
+# stage where it is about hosting and it is answerable. On a subscription the
+# binding constraint is the rate limit anyway, and that one is now genuinely
+# readable: account/rateLimits/read returns used percent and reset time.
+#
+# budget.warnUsd and budget.stopUsd still WORK if set by hand, for anyone
+# running on an API key where dollars are the real unit. They are simply not
+# asked, and they default to off.
 # The question text is here rather than in the skill so the CLI and the skill
 # can never drift apart on what was actually asked.
 
@@ -52,8 +71,6 @@ agents.claude.max|2|1-10|How many Claude agents may run at once?
 agents.codex.max|2|1-10|How many Codex agents may run at once?
 progress.mode|heartbeat|off,heartbeat,digest,window|Do you want to see progress while it works?
 permissions.bypass|true|true,false|Skip the "can I edit this file" prompts?
-budget.warnUsd|5|num|Warn me once a run passes this spend, in dollars.
-budget.stopUsd|0|num|Stop the run at this spend, in dollars. 0 means no hard stop.
 done.coverageMin|80|0-100|Test coverage floor before anything counts as done.
 EOF
 }
@@ -143,8 +160,6 @@ duet_setup_max () {   # <confirmation phrase>
     agents.codex.max=4 \
     progress.mode=heartbeat \
     permissions.bypass=true \
-    budget.warnUsd=25 \
-    budget.stopUsd=0 \
     done.coverageMin=80 || return 1
   duet_warn "max allowance is on. Nothing will stop until the final round."
 }
