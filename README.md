@@ -162,6 +162,17 @@ and the line you actually care about is what the user ends up seeing.
 `main`, touching production data, deleting outside the working tree. Short on
 purpose, because a long stop-list gets switched off wholesale.
 
+**The list is open.** Those three are defaults, not a vocabulary. Name whatever
+is irreversible in your project and Duet will hold it:
+
+```bash
+duet config safety.alwaysAsk push-to-main,production-data,deploy-to-production local
+```
+
+Nothing detects these actions mechanically. An agent about to do something names
+it, and Duet checks the name against this list, which is why the list has to be
+open: most things worth stopping are specific to one project.
+
 `safety.mode` decides what happens when one comes up:
 
 - `ask-now` stops and waits.

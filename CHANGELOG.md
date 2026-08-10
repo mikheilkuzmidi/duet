@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.4.2
+
+The stop-list is open, as it should have been.
+
+`safety.alwaysAsk` validated against a closed set of seven items, so a project
+could not express its own irreversible action. Asking Duet to stop before
+`deploy-to-production` was rejected as "not an expressible key", which is a
+config refusing to hold the one entry most worth having.
+
+The closed set bought nothing. Nothing in Duet detects these actions
+mechanically: an agent about to do something names it, and `duet_safety_listed`
+string-matches that name against the list. A fixed vocabulary therefore could
+not improve detection, and could only exclude the project-specific dangers that
+make up most of the real ones.
+
+The typo risk that motivated the enum is real and is now solved properly.
+Unrecognised items are accepted and warned about, so a misspelling is visible
+rather than silently dropped or hard rejected. Shape is still enforced: entries
+must be lower-case words joined by hyphens, so `Deploy_To_Production` and
+`deploy to production` are refused with a message saying what the shape is.
+
 ## 0.4.1
 
 Duet stops asking for a budget it cannot measure.

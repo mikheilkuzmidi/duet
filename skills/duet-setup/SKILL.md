@@ -76,7 +76,13 @@ Explain each in the answer text, never in a paragraph after it:
   finish. `product` decides technical things alone and stops when a choice
   changes what someone sees or reads. `off` stops at every decision.
 - **safety** the three defaults are the things a diff cannot undo: pushing to
-  main, touching production data, deleting outside the working tree.
+  main, touching production data, deleting outside the working tree. **The list
+  is open.** Offer those plus `global-install`, `paid-api` and
+  `rewrite-history`, and accept anything else they name in the same shape, like
+  `deploy-to-production` or `charge-a-customer`. Most real dangers are specific
+  to one project, so a fixed vocabulary would exclude exactly the entries worth
+  having. An unfamiliar item is accepted with a warning about spelling, because
+  it fires only when an agent names that action by the same name.
 - **safety.mode** `ask-now` stops and waits. `defer-to-final` never stops: the
   action does not happen, it queues with its exact command for the end. Pick
   that one if being interrupted is worse than waiting.

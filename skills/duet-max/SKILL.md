@@ -69,6 +69,12 @@ So the run is never interrupted, and the three genuinely unrecoverable things
 still take one deliberate yes. A mode that stops is not max. A mode that force
 pushes unasked is not defensible.
 
+The list is open, so a project with its own irreversible action can name it:
+
+```bash
+duet config safety.alwaysAsk push-to-main,production-data,deploy-to-production local
+```
+
 If somebody wants those queued items gone as well:
 
 ```bash

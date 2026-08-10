@@ -64,7 +64,7 @@ duet_setup_schema () {
 voice|plain|plain,technical|How should I talk to you: plain English, or straight technical?
 grill.depth|normal|off,normal,hard|Should I question you about the plan before building, or take the request as written?
 autonomy|product|full,product,off|How autonomous should I be?
-safety.alwaysAsk|push-to-main,production-data,delete-outside-tree|list:push-to-main,production-data,delete-outside-tree,global-install,paid-api,rewrite-history,none|What should I never do without asking?
+safety.alwaysAsk|push-to-main,production-data,delete-outside-tree|openlist:push-to-main,production-data,delete-outside-tree,global-install,paid-api,rewrite-history,none|What should I never do without asking?
 safety.mode|ask-now|ask-now,defer-to-final|When I hit one of those, stop and ask, or queue it for the end?
 git.mode|branch|none,commit,branch,pr|Should I commit as I go?
 agents.claude.max|2|1-10|How many Claude agents may run at once?
@@ -80,15 +80,32 @@ duet_setup_validate () {   # <key> <value> ; echoes ok or the reason it is not
   rule="$(duet_setup_schema | awk -F'|' -v k="$key" '$1==k{print $3}')"
   [ -z "$rule" ] && { printf 'unknown key'; return 1; }
   case "$rule" in
-    list:*)
-      # A comma separated subset. Every element must be allowed, because a typo
-      # in a safety list silently removes a guard rather than failing.
-      local allowed="${rule#list:}" item
+    openlist:*)
+      # An OPEN comma separated list. Shape is validated; membership is not.
+      #
+      # This was a closed enum until 0.4.2, and that was wrong. Nothing in Duet
+      # mechanically detects these actions: duet_safety_listed string-matches
+      # whatever name the orchestrator passes when it is about to do something.
+      # So a fixed vocabulary bought nothing and blocked the majority of real
+      # dangers, which are project-specific. "deploy-to-production" is a
+      # perfectly good stop-list entry and the config could not hold it.
+      #
+      # The typo risk that motivated the enum is real and is solved properly
+      # here: unrecognised items are ACCEPTED and warned about, so a misspelling
+      # is visible rather than either silently dropped or hard rejected.
+      local known="${rule#openlist:}" item
       IFS=',' read -ra _items <<< "$val"
       for item in "${_items[@]}"; do
         [ -z "$item" ] && continue
-        case ",$allowed," in *",$item,"*) : ;;
-          *) printf 'unknown item "%s". Allowed: %s' "$item" "$allowed"; return 1 ;;
+        case "$item" in
+          *[!a-z0-9-]*|-*|*-)
+            printf 'item "%s" must be lower-case words joined by hyphens, like deploy-to-production' "$item"
+            return 1 ;;
+        esac
+        case ",$known," in
+          *",$item,"*) : ;;
+          *) duet_warn "stop-list item '$item' is not one of the well-known ones."
+             duet_warn "  It will fire only when an agent names that action exactly. Check the spelling." ;;
         esac
       done ;;
     num) case "$val" in ''|*[!0-9.]*) printf 'expected a number'; return 1 ;; esac ;;
