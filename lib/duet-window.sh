@@ -54,30 +54,48 @@ duet_appserver_start () {   # <run-dir> ; echoes the pid
 #           try a few and do not pretend to cover them all
 #   last    print the command and let the human paste it. Not a failure; a
 #           tool that says "run this" beats one that silently does nothing.
-duet_window_open () {   # <run-dir>
-  local dir="$1" launcher="$1/attach-codex.command"
+# duet_window_open <stream.jsonl> [title] [run-root] [model]
+#
+# Opens a window running lib/duet-tail.py against the stream the delegation is
+# already writing. No websockets, no ws app-server, and it works identically for
+# `codex exec` and for goals, because both write the same JSONL.
+#
+# Opening a terminal has no portable primitive, so this is a LADDER and every
+# rung degrades honestly:
+#   macOS   `open -a Terminal file.command` needs no TCC grant, unlike osascript
+#   tmux    a new window in an existing session, if we are inside one
+#   Linux   the -e flag means four incompatible things across terminals, so we
+#           try a few and do not pretend to cover them all
+#   last    print the command and let the human paste it. Not a failure; a
+#           tool that says "run this" beats one that silently does nothing.
+duet_window_open () {
+  local stream="$1" title="${2:-codex}" root="${3:-}" model="${4:-}"
+  local dir launcher
+  dir="$(dirname "$stream")"
+  launcher="$dir/watch-codex.command"
+
   cat > "$launcher" <<EOF
 #!/bin/bash
-export CODEX_HOME="\${CODEX_HOME:-\$HOME/.codex}"
-echo "Duet: attaching this window to $DUET_WS_URL"
-echo "Work sent by the orchestrator appears here. Leave it open."
-exec codex --remote "$DUET_WS_URL"
+# Written by Duet. Closing this window does not stop the agent.
+exec python3 "$DUET_ROOT/lib/duet-tail.py" "$stream" \
+  --title "$title" --root "$root" --model "$model"
 EOF
   chmod +x "$launcher"
 
   if [ "$(uname)" = "Darwin" ] && command -v open >/dev/null; then
-    open -a Terminal "$launcher" && { duet_ok "opened a visible Codex window"; return 0; }
+    open -a Terminal "$launcher" && { duet_ok "opened a window on $title"; return 0; }
   fi
   if [ -n "${TMUX:-}" ] && duet_has tmux; then
     tmux new-window -n duet-codex "$launcher" && { duet_ok "opened a tmux window"; return 0; }
   fi
+  local t
   for t in x-terminal-emulator gnome-terminal konsole xfce4-terminal alacritty kitty; do
     duet_has "$t" && { "$t" -e "$launcher" >/dev/null 2>&1 & duet_ok "opened $t"; return 0; }
   done
 
   duet_warn "no way to open a terminal window on this system."
-  duet_say  "  run this yourself in another window to watch Codex work:"
-  duet_say  "    codex --remote $DUET_WS_URL"
+  duet_say  "  run this yourself to watch it:"
+  duet_say  "    $launcher"
   return 1
 }
 

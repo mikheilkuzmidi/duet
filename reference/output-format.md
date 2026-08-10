@@ -33,6 +33,18 @@ Findings, as findings. Not prose about findings:
   UNVERIFIABLE  CORS header on the info API  sandbox could not reach the host
 ```
 
+## The question header
+
+Every question is preceded by one line saying where the human is:
+
+```
+[Q 7 of ~15 · stage 3/11 Document reset]
+```
+
+Printed by `duet ask`, which also counts it. The tilde means part of the total
+is still an estimate. This line and the totals around it are exempt from the
+limit below: knowing how many questions remain is not chatter.
+
 ## The limits
 
 - Outside a gate or the final report, your whole turn is **six lines or fewer**.

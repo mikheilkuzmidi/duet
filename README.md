@@ -235,6 +235,11 @@ see what is left.
 [13/13] Done                zero outstanding, three places
 ```
 
+**You are told how many questions there are before the first one**, and every
+question carries its position: `[Q 7 of ~15 · stage 3/11 Document reset]`. If
+the count changes, Duet says so with the delta and the reason rather than
+quietly asking more.
+
 Stages 1 to 6 use no technical words. Somebody who has never opened a terminal
 can answer all of them, and every one arrives as a question with options that
 name their consequences, not as a paragraph to compose a reply to. When Duet
@@ -303,17 +308,19 @@ A four minute silent phase and a hung process look identical from the outside.
 | `off` | silence until the phase ends |
 | `heartbeat` | one line a minute, parsed from Codex's own output stream. Free. |
 | `digest` | that, plus the agent's own words condensed to two lines every few minutes, by a deliberately cheap Haiku call. **Uses extra quota**, and that is what makes it different from heartbeat rather than a second name for it. |
-| `window` | a second terminal running a live Codex session you can watch |
+| `window` | a second terminal running a live view of the agent, with a sticky header and footer. Needs nothing installed, and closing it does not stop the run |
 
-The window is not a trick. `codex app-server` is documented JSON-RPC, the TUI
-ships a first-party `--remote` flag, and an external client starting a turn on a
-thread it does not own is supported behaviour. It was verified end to end before
-being built: the harness and its output are in
-[`prototypes/oq1-codex-remote-attach/`](prototypes/oq1-codex-remote-attach/).
+![the window mode viewer](assets/tui.png)
 
-```bash
-pip install websockets    # the visible window only. Goals need nothing.
-```
+It tails the event stream both delegation paths already write, so it needs no
+websockets and behaves the same for a one-shot brief and for a goal. Full
+terminal width, commands truncated at the end rather than the middle, paths
+shortened to the part that identifies the file, and token counts formatted
+rather than dumped. `duet window` opens one on the current run by hand.
+
+Attaching a real Codex TUI over `codex --remote` also works and is documented
+in [`prototypes/oq1-codex-remote-attach/`](prototypes/oq1-codex-remote-attach/),
+but it needs `pip install websockets` and `window` mode no longer depends on it.
 
 ## Done means done
 

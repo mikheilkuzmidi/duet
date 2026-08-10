@@ -56,7 +56,20 @@ stops a project growing sideways every time somebody has an idea.
 
 ## Depth
 
-`grill.depth` decides how far this runs.
+`grill.depth` decides how far this runs. **There is no cap**, because a spec
+with a hole in it is more expensive than one more question.
+
+What there is instead is a promise. Work out how many of the archetypes this
+task actually needs, **say that number before asking any of them**, and revise
+it out loud if it changes:
+
+```
+Six questions before I build. The spec is missing failure behaviour, the
+concurrency story, and who else touches this.
+```
+
+Uncapped and announced is honest. Uncapped and silent is what produced a run
+that reached question 17 with no end in sight.
 
 **`off`** builds what was asked. Record the assumptions you had to make, in one
 line each, and move on. Legitimate: sometimes the person knows exactly what they

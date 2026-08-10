@@ -54,8 +54,25 @@ Nothing is written outside .duet/ until you say so.
 line per command from the table in `duet help`. On no, carry on. Do not print it
 unasked; somebody who already knows does not need it twice.
 
-**3. Say the cost.** "Ten questions, about two minutes. Every one has a
-recommended answer, so you can accept your way through it. Ready?"
+**3. Say the whole cost, not just setup's share.** The preset is already known,
+because invoking `duet-rescue` named it. So run `duet questions <preset>` and
+state ONE total covering everything:
+
+```
+duet-rescue. 15 questions in total.
+  10 now, to set up Duet in this repo. About two minutes.
+   5 during the run, at stages 1, 3 and 5 of 11.
+  Stage 1 may add a few if the read-back finds things worth asking about.
+  Nothing asks you after stage 5 until the final round.
+Ready?
+```
+
+Then `duet ask --begin <preset> <total> variable`, and one `duet ask` per
+question from here on, setup's included.
+
+Saying "ten questions" and then asking seventeen is the thing this replaced.
+With bare `/duet:duet` there is no preset yet, so say the ten and add that the
+plan will state the rest before anything runs, which it does.
 
 No is a real answer. Print the `duet setup --max` line and stop.
 

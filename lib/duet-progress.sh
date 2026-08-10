@@ -40,6 +40,8 @@
 # it survived every test that happened to run under `bash -c`.
 : "${DUET_ROOT:=$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")/.." && pwd)}"
 . "$DUET_ROOT/lib/duet-common.sh"
+. "$DUET_ROOT/lib/duet-window.sh"
+. "$DUET_ROOT/lib/duet-models.sh"
 
 duet_progress_mode () { duet_cfg progress.mode heartbeat; }
 
@@ -245,7 +247,17 @@ duet_progress_digest () {   # <jsonl file> ; up to two lines on stderr
 duet_progress_watch () {   # <jsonl file> <label> <pid> [interval] ; echoes watcher pid
   local f="$1" label="$2" pid="$3" iv="${4:-60}" mode dg
   mode="$(duet_progress_mode)"
-  case "$mode" in off|window) return 0 ;; esac
+  case "$mode" in off) return 0 ;; esac
+
+  # window used to return here, which meant choosing the most visible mode
+  # bought silence: the heartbeat was suppressed and nothing ever called
+  # duet_window_open. It opens the viewer AND keeps a slow heartbeat, so
+  # closing the window does not blind the run.
+  if [ "$mode" = "window" ]; then
+    duet_window_open "$f" "$label${DUET_STAGE_LABEL:+ · $DUET_STAGE_LABEL}" \
+      "$(dirname "$f")" "$(duet_codex_model 2>/dev/null)" || true
+    iv=$(( iv * 3 ))
+  fi
   dg="$(duet_cfg progress.digestEverySec 300)"
   (
     waited=0        # subshell scope, so no `local` and no leak into the caller

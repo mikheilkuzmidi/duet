@@ -16,6 +16,7 @@ export DUET_ROOT="$(cd "$HERE/.." && pwd)"
 . "$DUET_ROOT/lib/duet-run.sh"
 . "$DUET_ROOT/lib/duet-ledger.sh"
 . "$DUET_ROOT/lib/duet-preset.sh"
+. "$DUET_ROOT/lib/duet-ask.sh"
 . "$DUET_ROOT/lib/duet-detect.sh"
 . "$DUET_ROOT/lib/duet-goal.sh"
 . "$DUET_ROOT/lib/duet-progress.sh"
@@ -110,6 +111,35 @@ case "$cmd" in
     # What a delegated agent is told about THIS run. Printing it is how you
     # check that a setting reached the agent rather than merely being stored.
     duet_context_block "${1:-}" "${2:-}"
+    ;;
+
+  questions)
+    [ -z "${1:-}" ] && { duet_say "usage: duet questions <preset>"; exit 1; }
+    duet_preset_questions "$1" | grep -v '^FIXED='
+    ;;
+
+  ask)
+    case "${1:-}" in
+      --begin)  shift; duet_ask_begin "$@" ;;
+      --revise) shift; duet_ask_revise "$@" ;;
+      --report) duet_ask_report ;;
+      "")       duet_say "usage: duet ask <stage> <title>            count a question"
+                duet_say "       duet ask --begin <preset> <total> [variable]"
+                duet_say "       duet ask --revise <total> <why> [variable]"
+                duet_say "       duet ask --report"; exit 1 ;;
+      *)        duet_ask "$@" ;;
+    esac
+    ;;
+
+  window)
+    # Open a viewer on a run by hand. Useful when the window was closed, or when
+    # progress.mode is not window but you want to watch this one.
+    dir="${1:-$(duet_run_latest)}"
+    [ -z "$dir" ] && { duet_say "usage: duet window [run-dir]"; exit 1; }
+    stream="$(ls -1t "$dir"/phases/*/raw.jsonl 2>/dev/null | head -1)"
+    [ -z "$stream" ] && stream="$(ls -1t "$dir"/*.jsonl 2>/dev/null | head -1)"
+    [ -z "$stream" ] && duet_die "no stream found under $dir"
+    duet_window_open "$stream" "$(basename "$dir")" "$dir" "$(duet_codex_model)"
     ;;
 
   detect)
@@ -223,6 +253,9 @@ duet: Claude leads, Codex checks the facts.
   duet setup [k=v ...]   configure this repo. --show to read it back
   duet setup --max       max allowance: wide open, for people who read diffs
   duet detect [--save]   this project's install, test, lint, deploy commands
+  duet window [run-dir]  open a window watching an agent work
+  duet questions <preset>  how many questions it asks, and where
+  duet ask ...           count a question and print its header
   duet delegate ...      hand a brief to codex or claude
   duet goal ...          hand work over as a goal, which ends on a command
   duet context [stage]   what a delegated agent is told about this run

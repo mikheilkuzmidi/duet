@@ -25,6 +25,34 @@ Run `duet doctor`. **If it reports the repo is not set up, run the
 asked.** The human asked for something; setup is the questions Duet needs before
 it can do it, not a separate errand for them to run.
 
+## Say how many questions, then count them
+
+Before the first question, state the total. The preset is known, so the number
+is computable:
+
+```bash
+duet questions <preset>      # the run's share, and which stages ask
+duet ask --begin <preset> <total> variable   # 'variable' if part is an estimate
+```
+
+Then one call per question, which prints the header and counts it:
+
+```bash
+duet ask <stage-index> "<Stage title>"
+```
+
+```
+[Q 7 of ~15 · stage 3/11 Document reset]
+```
+
+When a variable part becomes knowable, revise **out loud**:
+
+```bash
+duet ask --revise 19 "The read-back found four unknowns worth asking."
+```
+
+Never revise silently. Rules in `reference/asking.md`.
+
 ## Every gate is a question with options
 
 Not a paragraph that ends in a question mark. Two to four options, each naming

@@ -1,5 +1,58 @@
 # Changelog
 
+## 0.5.0
+
+Two things a real rescue run made obvious.
+
+### Duet now says how many questions, and keeps saying where you are
+
+Setup opened with "Ten questions, about two minutes." True of setup and of
+nothing else: the preset then ran its own gates, the read-back turned unknowns
+into more questions, and grilling has no cap. A real run reached question 17 of
+an unknown total. Stating a number and quietly exceeding it is standing rule 7
+applied to Duet's own promises, which was the one place the rules were not being
+applied.
+
+The preset was always known, because invoking `duet-rescue` names it, so the
+combined total is computable before the first question with no extra friction.
+
+- `duet questions <preset>` reports the run's share and which stages ask.
+- Setup states ONE total: "duet-rescue. 15 questions in total. 10 now, 5 during
+  the run, at stages 1, 3 and 5 of 11. Nothing asks you after stage 5."
+- Every question carries `[Q 7 of ~15 · stage 3/11 Document reset]`, printed and
+  counted by `duet ask`. The tilde means part of the total is still an estimate;
+  its absence means nothing further can surprise you.
+- Revisions are announced in both directions with the delta and the reason.
+  **Never silently.** A number quietly replaced is worse than never giving one.
+- Grilling stays uncapped, because a spec with a hole is more expensive than one
+  more question. It now declares its count before asking rather than after.
+
+### `progress.mode=window` opens a window, and the window is worth looking at
+
+It was inert. `duet_progress_watch` returned immediately on `window`, so the
+heartbeat was suppressed, and nothing in the delegation path ever called
+`duet_window_open`. Choosing the most visible mode bought silence. The ws attach
+path it was written for also needs the `websockets` package, which is not
+installed, so it could not have worked as shipped.
+
+Now it opens a viewer on the JSONL both delegation paths already write, so it
+needs no websockets, no ws app-server, and behaves identically for `codex exec`
+and for goals. The leader keeps a slower heartbeat, so closing the window does
+not blind the run.
+
+`lib/duet-tail.py` is the viewer: sticky header and footer around a scrolling
+body, redrawn on resize. It fixes every flaw of the hand-rolled one it replaces.
+Full terminal width rather than 80 columns. Commands truncated at the END, so
+the start stays readable. Paths relative to the run. Tokens formatted as
+`8.9M in · 37k out` rather than a raw Python dict. Deduped by item id, because
+`item.started` and `item.completed` carry the same payload and printing on both
+is why the old viewer showed everything twice.
+
+`duet window [run-dir]` opens one by hand.
+
+Verified by opening a real Terminal window on macOS and streaming a live
+delegation into it, not by exit code.
+
 ## 0.4.3
 
 Every gate is a question with options.

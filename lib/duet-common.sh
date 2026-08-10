@@ -5,7 +5,7 @@
 # CLIs. A tool that lints other people's dependency hygiene should not arrive
 # with a pile of its own.
 
-DUET_VERSION="0.4.3"
+DUET_VERSION="0.5.0"
 DUET_ROOT="${DUET_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 DUET_MAX_AGENTS_CEILING=10          # total across both sides, never raisable
 DUET_MAX_AGENTS_DEFAULT=3           # legacy total, used when no side cap is set

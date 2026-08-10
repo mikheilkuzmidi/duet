@@ -87,6 +87,35 @@ print(f"DUET_STAGE_COUNT={len(d['stages'])}")
 PY
 }
 
+# How many questions this preset asks, and where.
+#
+# Everything needed is already in the JSON: gate == "user" stages, also_ask
+# entries, and whether a grill stage exists. Nothing surfaced it, which is why
+# setup could only ever promise its own ten.
+duet_preset_questions () {   # <preset>
+  local p="$1" f; f="$(duet_preset_file "$p")"
+  [ -f "$f" ] || duet_die "no such preset: $p"
+  python3 - "$f" <<'PY2'
+import json,sys
+d=json.load(open(sys.argv[1])); st=d["stages"]
+gates=[(i,s) for i,s in enumerate(st,1) if s.get("gate")=="user"]
+also=sum(len(s.get("also_ask",[])) for s in st)
+fixed=len(gates)+also
+grill=[i for i,s in gates if s["id"]=="grill"]
+where=", ".join(str(i) for i,_ in gates)
+print(f"  duet-{d['preset']}, {len(st)} stages")
+print(f"    {fixed} questions, at stage{'s' if len(gates)!=1 else ''} {where}")
+if grill:
+    print(f"    stage {grill[0]} is grilling and has no fixed count. The real number")
+    print( "    is stated before it starts, not discovered while it runs")
+if any(s["id"]=="readback" for _,s in gates):
+    print("    stage 1 may add a few: every unknown worth asking becomes its own question")
+lig=d.get("last_intent_gate")
+if lig: print(f"    nothing asks you after stage {lig} until the final round")
+print(f"FIXED={fixed}")
+PY2
+}
+
 # Resolve a stage's gate command into something runnable.
 #
 #   {{cmd.test}}  ->  commands.test from .duet/config.json

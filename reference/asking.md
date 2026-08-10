@@ -12,6 +12,55 @@ unambiguous.
 
 ---
 
+## Say how many, before the first one
+
+A person answering questions needs to know how many there are. Duet used to open
+with "ten questions", which was true of setup and of nothing else, and a real
+run reached question 17 of an unknown total.
+
+State the total before the first question. The preset is already known, because
+invoking `duet-rescue` named it, so `duet questions <preset>` gives the run's
+share and setup adds its own.
+
+```
+duet-rescue. 15 questions in total.
+  10 now, to set up Duet in this repo. About two minutes.
+   5 during the run, at stages 1, 3 and 5 of 11.
+  Stage 1 may add a few if the read-back finds things worth asking about.
+  Nothing asks you after stage 5 until the final round.
+```
+
+## Then keep saying where they are
+
+Every question carries its position, printed by `duet ask <stage> <title>`:
+
+```
+[Q 7 of ~15 · stage 3/11 Document reset]
+```
+
+The tilde means part of the total is still an estimate. Its absence means
+nothing further can surprise them, which is worth as much as the number.
+
+## Revise out loud, in both directions
+
+The moment a variable part becomes knowable, restate the total with the delta
+and the reason:
+
+```
+Revised: 19 questions, 4 more than I said.
+The read-back found four unknowns worth asking. Stages 5 to 11 still ask nothing.
+```
+
+Finishing under the estimate is announced too, because a total that only ever
+grows is one nobody believes.
+
+**Never revise silently.** A number quietly replaced is worse than never having
+given one, and it is the failure this section exists to prevent.
+
+The final round is stated separately and not counted. Every answer in it arrives
+pre-selected and the run completes whether it is answered or not, so folding it
+in would present an optional round as a required one.
+
 ## The shape
 
 - **Two to four options.** Each one a real thing somebody would pick.
