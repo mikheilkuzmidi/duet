@@ -12,7 +12,8 @@
       "owner": "claude",
       "gate": "user",
       "ask": "What should this skill do? One sentence. If it takes two, it may be two skills.",
-      "done": "One sentence, and a note of anything nearby that is deliberately a different skill."
+      "done": "One sentence, and a note of anything nearby that is deliberately a different skill.",
+      "ask_style": "options"
     },
     {
       "id": "triggers",
@@ -25,7 +26,8 @@
         "Collect real phrasings, not canonical ones. Nobody types the canonical one.",
         "Also collect near misses that must NOT fire it. A skill that fires too often gets uninstalled faster than one that never fires."
       ],
-      "done": "A list of should-fire phrasings and a list of must-not-fire ones."
+      "done": "A list of should-fire phrasings and a list of must-not-fire ones.",
+      "ask_style": "options"
     },
     {
       "id": "guardrails",
@@ -47,7 +49,8 @@
           },
           "why": "Asked here rather than at setup because this is the moment the person actually knows how much they trust the plan. The setup answer is the default, not the verdict."
         }
-      ]
+      ],
+      "ask_style": "options"
     },
     {
       "id": "research",
@@ -112,5 +115,6 @@
       "gate_cmd": "test -f SKILL.md && grep -q '^name:' SKILL.md && grep -q '^description:' SKILL.md"
     }
   ],
-  "gate_cmd_note": "A stage is done when its gate_cmd exits zero, not when an agent says so. {{cmd.X}} resolves from commands.* in .duet/config.json, detected once by lib/duet-detect.sh. {{out}} is the phase output path. Human gates carry no command, because 'the human confirmed' is not a command."
+  "gate_cmd_note": "A stage is done when its gate_cmd exits zero, not when an agent says so. {{cmd.X}} resolves from commands.* in .duet/config.json, detected once by lib/duet-detect.sh. {{out}} is the phase output path. Human gates carry no command, because 'the human confirmed' is not a command.",
+  "ask_note": "Every gate is a question with two to four options, each naming its consequence, one recommended. Free text stays available and is never the only path. A gate written as a paragraph ending in a question mark is a gate the human has to compose an answer to. See reference/asking.md."
 }

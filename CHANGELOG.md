@@ -1,5 +1,34 @@
 # Changelog
 
+## 0.4.3
+
+Every gate is a question with options.
+
+Duet's gates were written as prose that ended in a question mark, and the rescue
+preset's read-back was the worst of them: a paragraph describing the app, then a
+bulleted list of six things it could not work out, then "correct me where I have
+got it wrong". That hands the structuring work back to the person who asked for
+the work, they answer only the parts they happen to notice, and whatever they
+skip becomes an assumption nobody recorded.
+
+`reference/asking.md` is new and injected into every delegated call. Two to four
+options per question, each naming its consequence rather than just a label, one
+recommended so accepting is a single press, free text always available and never
+the only path. No inventing a third option to make three. Multi-select when the
+answers are not exclusive.
+
+The rule that was being broken, stated plainly: **a list of unknowns is a list
+of questions.** Ask the ones where a different answer changes what gets built,
+and record the rest with `duet_question_add` and a recommendation. Two questions
+and four recorded assumptions beats six questions, and either beats a paragraph.
+
+- Every gate stage in all four presets carries `ask_style: options`.
+- The rescue read-back stage carries the wrong and right shapes as an example,
+  because that is where the failure showed up.
+- Statements stay statements. The read-back itself is prose, and does not become
+  a question by appending "does that sound right", which only ever gets a yes
+  from somebody who skimmed it.
+
 ## 0.4.2
 
 The stop-list is open, as it should have been.

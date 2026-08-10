@@ -15,16 +15,19 @@
       "ask": "Here is what this app appears to do, who it appears to be for, and what appears to be broken. In plain English, no file names. Tell me what I got wrong.",
       "rules": [
         "State it as an observation, not a question. 'This looks like a booking tool for small clinics' beats 'what does this do'.",
-        "Name what you could not work out. A gap you admit is cheaper than a guess they have to catch.",
+        "EVERY THING YOU COULD NOT WORK OUT IS ITS OWN QUESTION WITH OPTIONS, drawn from what the code shows. Never a bulleted list of unknowns ending in 'correct me where I am wrong': that makes the human compose the answer, and the parts they skip become assumptions nobody recorded. See reference/asking.md.",
+        "Ask only the unknowns where a different answer changes what you would build. If six things are unresolved, ask the two that matter and record the rest as assumptions with your recommendation.",
+        "Each option names its consequence. 'Experiment that grew' is a label; 'experiment that grew, so stage 3 deletes its docs rather than rewriting them' is something they can judge.",
         "This replaces asking for the idea. They already built it once."
       ],
-      "done": "understanding.md holds the description the human confirmed or corrected, and a do-not-touch list, which may be empty.",
+      "done": "understanding.md holds the description the human confirmed or corrected, every material unknown resolved by an answered question rather than by prose, and a do-not-touch list which may be empty.",
       "also_ask": [
         {
           "q": "Anything in here I must not touch? A part that is fragile, or that somebody depends on in a way the code does not show.",
           "why": "The load-bearing hack is invisible to an audit and expensive to discover by breaking it. Named now, it becomes a constraint. Named later, it is an outage."
         }
-      ]
+      ],
+      "ask_style": "options"
     },
     {
       "id": "audit",
@@ -56,7 +59,8 @@
         "README.md, LICENSE, CHANGELOG and anything under .github are excluded from the ask by default: they face outward and are not agent instructions.",
         "On no, the new documents are written alongside the old ones instead, and the conflict is recorded in decisions.md."
       ],
-      "done": "The human answered, and the answer is recorded."
+      "done": "The human answered, and the answer is recorded.",
+      "ask_style": "options"
     },
     {
       "id": "instructions",
@@ -119,7 +123,8 @@
           },
           "why": "Asked here rather than at setup because this is the moment the person actually knows how much they trust the plan. The setup answer is the default, not the verdict."
         }
-      ]
+      ],
+      "ask_style": "options"
     },
     {
       "id": "inventory",
@@ -192,5 +197,6 @@
       "gate_cmd": "{{cmd.install}} && {{cmd.typecheck}} && {{cmd.lint}} && {{cmd.test}}"
     }
   ],
-  "gate_cmd_note": "A stage is done when its gate_cmd exits zero, not when an agent says so. {{cmd.X}} resolves from commands.* in .duet/config.json, detected once by lib/duet-detect.sh. {{out}} is the phase output path. Human gates carry no command, because 'the human confirmed' is not a command."
+  "gate_cmd_note": "A stage is done when its gate_cmd exits zero, not when an agent says so. {{cmd.X}} resolves from commands.* in .duet/config.json, detected once by lib/duet-detect.sh. {{out}} is the phase output path. Human gates carry no command, because 'the human confirmed' is not a command.",
+  "ask_note": "Every gate is a question with two to four options, each naming its consequence, one recommended. Free text stays available and is never the only path. A gate written as a paragraph ending in a question mark is a gate the human has to compose an answer to. See reference/asking.md."
 }

@@ -12,7 +12,8 @@
       "owner": "claude",
       "gate": "user",
       "ask": "What are you making? Say it however you would say it to a friend. No technical words needed.",
-      "done": "spec.md holds one paragraph the human confirmed is right."
+      "done": "spec.md holds one paragraph the human confirmed is right.",
+      "ask_style": "options"
     },
     {
       "id": "users",
@@ -21,7 +22,8 @@
       "owner": "claude",
       "gate": "user",
       "ask": "Who is this for, and what is the first thing they do when they open it?",
-      "done": "spec.md names the user types and the first action for each."
+      "done": "spec.md names the user types and the first action for each.",
+      "ask_style": "options"
     },
     {
       "id": "budget",
@@ -41,7 +43,8 @@
           "why": "Moves auth, hosting region, logging and backups. Asked now because retrofitting it after the architecture is chosen is the expensive way to learn it."
         }
       ],
-      "note": "This is the project's monthly running cost, and it is the only money question Duet asks. It does not ask about its own token spend, because Codex exposes no dollar figure and half a total presented as a whole one is worse than no total."
+      "note": "This is the project's monthly running cost, and it is the only money question Duet asks. It does not ask about its own token spend, because Codex exposes no dollar figure and half a total presented as a whole one is worse than no total.",
+      "ask_style": "options"
     },
     {
       "id": "grill",
@@ -51,7 +54,8 @@
       "gate": "user",
       "skip_when": "grill.depth is off",
       "ask": "One question at a time, in plain language, each one earning its place. Stop when the next question would not change what gets built.",
-      "done": "spec.md answers every question a builder would otherwise have to guess."
+      "done": "spec.md answers every question a builder would otherwise have to guess.",
+      "ask_style": "options"
     },
     {
       "id": "research",
@@ -95,7 +99,8 @@
           },
           "why": "Asked here rather than at setup because this is the moment the person actually knows how much they trust the plan. The setup answer is the default, not the verdict."
         }
-      ]
+      ],
+      "ask_style": "options"
     },
     {
       "id": "documents",
@@ -192,5 +197,6 @@
       "gate_cmd": "{{cmd.install}} && {{cmd.typecheck}} && {{cmd.lint}} && {{cmd.test}}"
     }
   ],
-  "gate_cmd_note": "A stage is done when its gate_cmd exits zero, not when an agent says so. {{cmd.X}} resolves from commands.* in .duet/config.json, detected once by lib/duet-detect.sh. {{out}} is the phase output path. Human gates carry no command, because 'the human confirmed' is not a command."
+  "gate_cmd_note": "A stage is done when its gate_cmd exits zero, not when an agent says so. {{cmd.X}} resolves from commands.* in .duet/config.json, detected once by lib/duet-detect.sh. {{out}} is the phase output path. Human gates carry no command, because 'the human confirmed' is not a command.",
+  "ask_note": "Every gate is a question with two to four options, each naming its consequence, one recommended. Free text stays available and is never the only path. A gate written as a paragraph ending in a question mark is a gate the human has to compose an answer to. See reference/asking.md."
 }

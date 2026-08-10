@@ -21,6 +21,20 @@ for something else, so:
   that setup finished and stop. Finishing setup and waiting is the failure mode
   this replaced.
 
+## Every gate is a question with options
+
+Not a paragraph that ends in a question mark. Two to four options, each naming
+its consequence, one recommended so accepting takes a single press. Free text
+stays available and is never the only path.
+
+**A list of things you could not work out is a list of questions.** Never a
+bulleted list of unknowns followed by "correct me where I am wrong": that makes
+the human compose the answer, and whatever they skip becomes an assumption
+nobody recorded. Ask the ones where a different answer changes what you build,
+and record the rest with `duet_question_add`.
+
+Full rules in `reference/asking.md`.
+
 ## Before the first question
 
 Somebody running this for the first time has no idea what is about to happen or

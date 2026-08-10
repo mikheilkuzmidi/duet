@@ -29,6 +29,20 @@ Run `duet doctor`. **If it reports the repo is not set up, run the
 asked.** The human asked for something; setup is the questions Duet needs before
 it can do it, not a separate errand for them to run.
 
+## Every gate is a question with options
+
+Not a paragraph that ends in a question mark. Two to four options, each naming
+its consequence, one recommended so accepting takes a single press. Free text
+stays available and is never the only path.
+
+**A list of things you could not work out is a list of questions.** Never a
+bulleted list of unknowns followed by "correct me where I am wrong": that makes
+the human compose the answer, and whatever they skip becomes an assumption
+nobody recorded. Ask the ones where a different answer changes what you build,
+and record the rest with `duet_question_add`.
+
+Full rules in `reference/asking.md`.
+
 ## Running a stage
 
 Work that writes code goes through a goal, not a prompt. A prompt ends when the
@@ -68,10 +82,37 @@ comments and the names to learn what somebody meant. Then verify all of it
 against the code and against current documentation before believing any of it.
 Cite existing docs as claims. Never as sources.
 
-## Stage 1 states, it does not ask
+## Stage 1 states, then asks properly
 
 Read the repo, then say what it looks like this app does and who for. Plain
-English, no file paths. Name what you could not work out.
+English, no file paths. That part is a statement and belongs as prose.
+
+**What you could not work out is not prose. It is questions with options.**
+
+Wrong, and it is the easy mistake because the unknowns arrive as a list:
+
+```
+What I could not work out:
+  - Whether prediction markets are a real product line or an experiment
+  - Whether the Telegram bot was ever a real product
+  - Whether the leaderboard is a feature you care about
+Correct me where I have got it wrong.
+```
+
+That hands the structuring work back to the person who asked you to do it, and
+whatever they skip becomes an assumption nobody wrote down. Right:
+
+```
+Prediction markets: a real product line, or an experiment that grew?
+  Real product line     kept, tested, documented as a feature
+  Experiment that grew  code stays, stops being treated as a promise
+  Retired               surface goes, and the risk-disclosure text with it
+```
+
+Ask the unknowns where a different answer changes what you build. Record the
+rest with `duet_question_add` and your recommendation. If six things are
+unresolved, two questions and four recorded assumptions beats six questions, and
+either beats a paragraph.
 
 They already built this once. Asking them for the idea from scratch tells them
 you did not read it.

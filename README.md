@@ -236,7 +236,10 @@ see what is left.
 ```
 
 Stages 1 to 6 use no technical words. Somebody who has never opened a terminal
-can answer all of them.
+can answer all of them, and every one arrives as a question with options that
+name their consequences, not as a paragraph to compose a reply to. When Duet
+cannot work something out, that is a question with options too, never a list of
+unknowns with "correct me where I am wrong" at the bottom.
 
 **Stage 6 is the last question about intent.** After it, everything accumulates
 into one final round where each question arrives with a recommended answer

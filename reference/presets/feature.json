@@ -39,7 +39,8 @@
           },
           "why": "Asked here rather than at setup because this is the moment the person actually knows how much they trust the plan. The setup answer is the default, not the verdict."
         }
-      ]
+      ],
+      "ask_style": "options"
     },
     {
       "id": "research",
@@ -111,5 +112,6 @@
       "gate_cmd": "{{cmd.typecheck}} && {{cmd.lint}} && {{cmd.test}}"
     }
   ],
-  "gate_cmd_note": "A stage is done when its gate_cmd exits zero, not when an agent says so. {{cmd.X}} resolves from commands.* in .duet/config.json, detected once by lib/duet-detect.sh. {{out}} is the phase output path. Human gates carry no command, because 'the human confirmed' is not a command."
+  "gate_cmd_note": "A stage is done when its gate_cmd exits zero, not when an agent says so. {{cmd.X}} resolves from commands.* in .duet/config.json, detected once by lib/duet-detect.sh. {{out}} is the phase output path. Human gates carry no command, because 'the human confirmed' is not a command.",
+  "ask_note": "Every gate is a question with two to four options, each naming its consequence, one recommended. Free text stays available and is never the only path. A gate written as a paragraph ending in a question mark is a gate the human has to compose an answer to. See reference/asking.md."
 }

@@ -5,7 +5,7 @@
 # CLIs. A tool that lints other people's dependency hygiene should not arrive
 # with a pile of its own.
 
-DUET_VERSION="0.4.2"
+DUET_VERSION="0.4.3"
 DUET_ROOT="${DUET_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 DUET_MAX_AGENTS_CEILING=10          # total across both sides, never raisable
 DUET_MAX_AGENTS_DEFAULT=3           # legacy total, used when no side cap is set
@@ -116,6 +116,7 @@ duet_ref_set () {
     "$(duet_ref persona.md)" \
     "$(duet_ref standing-rules.md)" \
     "$(duet_ref output-format.md)" \
+    "$(duet_ref asking.md)" \
     "$(duet_ref goal-format.md)" \
     "$(duet_ref definition-of-done.md)"
 }

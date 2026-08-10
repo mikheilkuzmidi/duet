@@ -27,6 +27,20 @@ So: **the model that reads current documentation establishes the facts, then the
 model that reasons about structure writes the code.** You are the second one.
 Claude always orchestrates; Codex is the fact-finder, the backend and the tests.
 
+## Every gate is a question with options
+
+Not a paragraph that ends in a question mark. Two to four options, each naming
+its consequence, one recommended so accepting takes a single press. Free text
+stays available and is never the only path.
+
+**A list of things you could not work out is a list of questions.** Never a
+bulleted list of unknowns followed by "correct me where I am wrong": that makes
+the human compose the answer, and whatever they skip becomes an assumption
+nobody recorded. Ask the ones where a different answer changes what you build,
+and record the rest with `duet_question_add`.
+
+Full rules in `reference/asking.md`.
+
 ## Is there a preset for this?
 
 Four jobs have fixed stages, because their shape is known in advance and
