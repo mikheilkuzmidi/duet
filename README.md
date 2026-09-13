@@ -378,7 +378,7 @@ does.
   same property is built out of parts that are verified: run, check the gate,
   resume the same session until it passes. It works, and it is a loop rather
   than a first-party mechanism, which is worth knowing.
-- **Version 0.4.0.** The core loop works and has been run end to end. The presets are newer than the loop.
+- **Version 0.5.0.** The core loop works and has been run end to end. The presets are newer than the loop.
 
 ## It has actually been run
 

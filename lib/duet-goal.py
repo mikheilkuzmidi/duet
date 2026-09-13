@@ -16,6 +16,7 @@ Exit codes match duet-goal.sh:
 
 import argparse
 import json
+import os
 import queue
 import subprocess
 import sys
@@ -23,6 +24,10 @@ import threading
 import time
 
 OK, ERROR, USAGE_LIMITED, BUDGET_LIMITED, BLOCKED, TIMEOUT = 0, 1, 75, 76, 77, 78
+
+# duet-common.sh is the single source of the version. Carrying a second copy
+# here meant the app server was told 0.4.0 for the whole of 0.5.0.
+DUET_VERSION = os.environ.get("DUET_VERSION") or "unknown"
 
 # The wire uses camelCase, the sqlite mirror uses snake_case. Accept both, or a
 # usage limit passes as an unrecognised status and the run looks like a hang.
@@ -161,7 +166,7 @@ def run(args):
 
     try:
         rid = srv.send("initialize", {
-            "clientInfo": {"name": "duet", "version": "0.4.0"},
+            "clientInfo": {"name": "duet", "version": DUET_VERSION},
             "capabilities": {"experimentalApi": True},
         })
         r = wait(rid, timeout=30)

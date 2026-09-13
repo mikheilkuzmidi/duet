@@ -6,6 +6,7 @@
 # with a pile of its own.
 
 DUET_VERSION="0.5.0"
+export DUET_VERSION            # duet-goal.py reports it to the app server
 DUET_ROOT="${DUET_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 DUET_MAX_AGENTS_CEILING=10          # total across both sides, never raisable
 DUET_MAX_AGENTS_DEFAULT=3           # legacy total, used when no side cap is set
